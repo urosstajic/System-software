@@ -1,36 +1,24 @@
 #pragma once
-#include<iostream>
-#include <string>
-#include "Simbol.h"
+
+#include <iostream>
 #include <list>
 #include <iterator>
 using namespace std;
 
-
+#include "Simb.h"
 class TabelaSimbola
 {
 private:
-	
-
-
+	list<Simb> tabelasimbola;
 public:
-	list <Simbol> tabela;
-	TabelaSimbola();
-	void dodajSimbol(Simbol s);
-	bool proveriLabelu(string label); //vraca true ako moze da se doda u tabelu simbola
-	void postaviGlobal(string lab);
-	int proveriGlobalnost(string ucitan);
-	int dohvatiRB(string ime);
-	int dohvatiRBSekcije(string ime);
-	int dohvatiOffset(string ucitan);
-	string dohvatiSekciju(string ucitan);
-	int dohvatiOffsetRB(int rbb);
-	Simbol& dohvSimbol(string ime);
+	void dodajSimb(Simb s);
+	bool da_li_postoji_simbol(string naziv);
 	friend ostream& operator<<(ostream& it, TabelaSimbola t);
-	~TabelaSimbola();
-	Simbol & dohvSimbRBPo(int rb);
-	bool postojiLabela(string labela);
-
-	
+	void simbolGlobalan(string ime);
+	Simb dohvatiSimbol(string ime);
+	Simb& dohvatiSimbolZaMenjanje(string ime);
+	int dohvatiDuzinu();
+	Simb nadjiSimbPoImenuISekciji(string ime, string sekc);
+	Simb dohvatiSimbPoRbr(int br);
 };
 

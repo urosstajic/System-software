@@ -1,20 +1,26 @@
 #pragma once
-#include <iostream>
 #include <string>
-using namespace std;
 
+using namespace std;
 class Sekcija
 {
+private:
+	string naziv;
+	//int offset;
+	//string sadrzaj, objasnjenje;
+	static int pom_rbr;
+	int velicina=-1;
+	int rbr;
+	int pocetna_adresa = -1;
 public:
-	string ime;
-	string size;
-	int rb=0; //iz tabele simbola
-	string pocetnaAdresa="#";
-	string krajnjaAdresa;
-	
-	Sekcija(string i, string s);
-	Sekcija(string i, string s, int r, string p,string k);
-	void promeniVel(int n); //heksa vrednost
+	Sekcija(string n);
+	Sekcija(string n, int r, int ve);
+	string getNaziv();
+	int getRbr();
+	void postaviVelicinu(int v);
 	friend ostream& operator<<(ostream& it, const Sekcija& s);
+	int getVelicina();
+	void postaviPocetnuAdresu(int p);
+	int dohvatiPocetnuAdresu();
 };
 

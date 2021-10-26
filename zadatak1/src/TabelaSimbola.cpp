@@ -1,183 +1,81 @@
 #include "TabelaSimbola.h"
-#include <stdlib.h>
-TabelaSimbola::TabelaSimbola()
-{
+void TabelaSimbola::dodajSimb(Simb s) {
+	this->tabelasimbola.push_back(s);
 }
 
-
-
-
-Simbol& TabelaSimbola::dohvSimbRBPo(int rb)
-{
-	list <Simbol> ::iterator iter;
-	for (iter = tabela.begin(); iter != tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getRB() == rb) {
-			return (*iter);
+bool TabelaSimbola::da_li_postoji_simbol(string naziv) {
+	list<Simb>::iterator i;
+	for (i = this->tabelasimbola.begin(); i != this->tabelasimbola.end(); i++) {
+		if ((*i).getLabel() == naziv) {
+			return true;
 		}
-	}
-
-	
-}
-
-bool TabelaSimbola::postojiLabela(string labela)
-{
-	list <Simbol> ::iterator iter;
-	for (iter = tabela.begin(); iter != tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getLabela()==labela) { return true; }
 	}
 	return false;
 }
-
-void TabelaSimbola::dodajSimbol(Simbol s)
-{
-	//ako vec ne postoji taj vec je obezbedjeno u proveri labelu
-	tabela.push_back(s);
-}
-
-bool TabelaSimbola::proveriLabelu(string label)
-{
-	list <Simbol> ::iterator iter;
-	for (iter = tabela.begin(); iter != tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getLabela() == label) { return true; }
-	}
-
-	return false;
-}
-
-void TabelaSimbola::postaviGlobal(string lab)
-{
-	list <Simbol> ::iterator iter;
-	for (iter = tabela.begin(); iter != tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getLabela() == lab) {
-			(*iter).setLocal(false);
-			break;
-		}
-	}
-}
-
-int TabelaSimbola::proveriGlobalnost(string ucitan)
-{
-	list <Simbol> ::iterator iter;
-	for (iter = tabela.begin(); iter != tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getLabela() == ucitan) {
-			if ((*iter).getLocal())
-				return 0;
-			else return 1;
-			break;
-			
-		}
-	}
-	return 0;
-}
-
-int TabelaSimbola::dohvatiRB(string ime)
-{
-
-	list <Simbol> ::iterator iter;
-	for (iter = tabela.begin(); iter != tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getLabela() == ime) {
-			return (*iter).getRB();
-			
-			break;
-
-		}
-	}
-	return -2;
-}
-
-int TabelaSimbola::dohvatiRBSekcije(string ime)
-{
-	list <Simbol> ::iterator iter;
-	for (iter = tabela.begin(); iter != tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getLabela() == ime) {
-			string sek=(*iter).getSekcija();
-			return this->dohvatiRB(sek);
-			break;
-
-		}
-	}
-	return 0;
-}
-
-int TabelaSimbola::dohvatiOffset(string ucitan)
-{
-
-	list <Simbol> ::iterator iter;
-	for (iter = tabela.begin(); iter != tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getLabela() == ucitan) {
-		
-			return  (*iter).getOffset();
-			
-
-		}
-	}
-	return 0;
-}
-
-string TabelaSimbola::dohvatiSekciju(string ucitan)
-{
-
-	list <Simbol> ::iterator iter;
-	for (iter = tabela.begin(); iter != tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getLabela() == ucitan) {
-
-			return  (*iter).getSekcija();
-
-
-		}
-	}
-	return "";
-}
-
-
-
-int TabelaSimbola::dohvatiOffsetRB(int rbb)
-{
-
-	list <Simbol> ::iterator iter;
-	for (iter = tabela.begin(); iter != tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getRB()==rbb) {
-
-			return  (*iter).getOffset();
-
-
-		}
-	}
-	return 0;
-}
-
-
-
-
-
-Simbol& TabelaSimbola::dohvSimbol(string ime)
-{
-	
-	list <Simbol> ::iterator iter;
-	for (iter = tabela.begin(); iter != tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getLabela() == ime) {
-			return (*iter);
-
-		}
-	}
-
-}
-
 
 ostream& operator<<(ostream& it, TabelaSimbola t)
 {
-	list <Simbol> ::iterator iter;
-	for (iter = t.tabela.begin(); iter != t.tabela.end(); ++iter) { //bilo je ++iter
-	      it << (*iter)<<"\n"; //ne iterira dobro
+	list <Simb> ::iterator iter;
+	it << "Tabela simbola" << endl;
+	//it << "Naziv simbola" << "\t" << "OFSET" << "\t" << "Naziv sekcije" << "\t" << "local/global" << "\t" << "Redni broj"<<"\n";
+	for (iter = t.tabelasimbola.begin(); iter != t.tabelasimbola.end(); ++iter) {
+		it << (*iter) << "\n"; //ne iterira dobro
 	}
-	
+
 	return it;
 }
 
-TabelaSimbola::~TabelaSimbola()
-{
-	//tabela.~list();
+void TabelaSimbola::simbolGlobalan(string ime) {
+	list <Simb> ::iterator i;
+	for (i = this->tabelasimbola.begin(); i != tabelasimbola.end(); i++) {
+		if ((*i).getLabel() == ime) {
+			(*i).simbolGlobalan();
+			break;
+		}
+	}
 }
 
+Simb TabelaSimbola::dohvatiSimbol(string ime) {
+	list <Simb> ::iterator i;
+	for (i = this->tabelasimbola.begin(); i != tabelasimbola.end(); i++) {
+		if ((*i).getLabel() == ime) {
+			return (*i);
+		}
+	}
+	return (*i);
+}
 
+Simb& TabelaSimbola::dohvatiSimbolZaMenjanje(string ime) {
+	list <Simb> ::iterator i;
+	for (i = this->tabelasimbola.begin(); i != tabelasimbola.end(); i++) {
+		if ((*i).getLabel() == ime) {
+			return (*i);
+		}
+	}
+	return (*i);
+}
 
+int TabelaSimbola::dohvatiDuzinu() {
+	if (tabelasimbola.empty())return 0;
+	else return this->tabelasimbola.size();
+}
+
+Simb TabelaSimbola::nadjiSimbPoImenuISekciji(string ime, string sek) {
+	list<Simb>::iterator i;
+	for (i = tabelasimbola.begin(); i != tabelasimbola.end(); i++) {
+		if ((*i).getLabel() == ime && (*i).dohvatiNazivSekcije()==sek) {
+			return (*i);
+		}
+	}
+	return Simb("greska", -10, -10, "greska");
+}
+
+Simb TabelaSimbola::dohvatiSimbPoRbr(int br) {
+	list<Simb>::iterator i;
+	for (i = tabelasimbola.begin(); i != tabelasimbola.end(); i++) {
+		if ((*i).dohvatiRbr()==br) {
+			return (*i);
+		}
+	}
+	return Simb("greska", -10, -10, "greska");
+}

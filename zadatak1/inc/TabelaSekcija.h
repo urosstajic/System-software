@@ -1,20 +1,25 @@
 #pragma once
-
-#include<iostream>
-#include <string>
 #include "Sekcija.h"
 #include <list>
 #include <iterator>
-using namespace std;
 
-	
+using namespace std;
 class TabelaSekcija
 {
+private:
+	list<Sekcija> tabela_sekcija;
 public:
-	list <Sekcija> tabela;
-	friend ostream& operator<<(ostream& it, TabelaSekcija t);
 	void dodajSekciju(Sekcija s);
-	bool postojiSekcija(string ime);
-	Sekcija& dohvSek(string deo);
+	bool da_li_postoji_sekcija(string naziv);
+	Sekcija nadjiSekciju(string naziv);
+	Sekcija nadjiSekcijuPoRBr(int br);
+	int duzina();
+	int pocetnaAdresa(string naziv);
+	friend ostream& operator<<(ostream& it, TabelaSekcija t);
+	Sekcija& nadjiSekcijuZaPromenuVelicine(int br);
+	int dohvatiVelicinuCeleSekcije(string naziv);
+	int nadjiSveVelPreMene(string naziv);
+	int nadjiElemPreMene(string naziv);
+	void izbaciSve();
 };
 

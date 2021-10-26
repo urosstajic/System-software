@@ -1,15 +1,14 @@
-.global b
-.extern ww
-.section druga
-add r5, r6
-call *[r6 + ww]
-mul r4, r2
-.section prva
-test r1, r2
-jne %ww
-.section treca
-#malo komentarcica
-b: .skip 4
-a: div r1, r2
-.word 85, 0x20, a
+.global uvezen
+.extern nekob, labela2
+.section trecasekcija
+uvezen: 
+#komentar neki
+sub r4, r3
+ldr r0, labela2
+jmp %nekob
+#opet komentar
+.section drugasekcija
+jeq *nekob
+jne *[r1 + uvezen]
+ret
 .end

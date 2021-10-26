@@ -1,0 +1,16 @@
+Tabela sekcija
+prvasekcija       0                 14                
+drugasekcija      1                 12                
+
+Tabela simbola
+prvasekcija    0              prvasekcija    local          0              
+labela1        2              prvasekcija    global         1              
+drugasekcija   0              drugasekcija   local          2              
+
+Tabela relokacionih zapisa
+drugasekcija   5              R_X86_64_16              labela1        0              
+
+
+Sadrzaj sekcija
+prvasekcija 703060528313B06512A046427445
+drugasekcija 9156B059000000B069040010

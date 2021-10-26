@@ -1,25 +1,20 @@
-TabelaSekcija
-prva	1A	4	0	19
-druga	11	6	0	10
-equ	8	-1	0	7
-TabelaSimbola
-b	-1	UND	global	0
-dd	-1	UND	global	1
-a	0	equ	local	2
-ww	4	equ	global	3
-prva	0	prva	local	4
-andrea	5	prva	local	5
-druga	0	druga	local	6
-RelokacionaTabela
-prva	13	R_X86_64_16	1	0
-prva	18	R_X86_64_PC16	1	-2
-prva	22	R_X86_64noninst_16	3	0
-druga	8	R_X86_64_16	4	0
-druga	15	R_X86_64noninst_16	4	0
-Kodovi
-equ
-00080010
-prva
-A049040008A047050008B059040000B057050000010000001000
-druga
-50F9040008B05900000552F70500080500
+Tabela sekcija
+prvasekcija       0                 6                 
+drugasekcija      1                 28                
+
+Tabela simbola
+uvezen         -1             UND            global         0              
+prvasekcija    0              prvasekcija    local          1              
+drugasekcija   0              drugasekcija   local          2              
+nekoa          0              drugasekcija   local          3              
+labela1        10             drugasekcija   global         4              
+nekob          13             drugasekcija   global         5              
+
+Tabela relokacionih zapisa
+prvasekcija    2              R_X86_64noninst_16       nekob          0              
+drugasekcija   26             R_X86_64_16              uvezen         0              
+
+
+Sadrzaj sekcija
+prvasekcija 060000002000
+drugasekcija 7023B017050006A01642B06412A029040011A05705FFF350F9040000

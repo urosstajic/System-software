@@ -1,29 +1,28 @@
-TabelaSekcija
-ivt	10	0	0	F
-isr	3E	3	0	3D
-equ	C	-1	0	B
-TabelaSimbola
-ivt	0	ivt	local	0
-myStart	-1	UND	global	1
-myCounter	-1	UND	global	2
-isr	0	isr	local	3
-term_out	0	equ	local	4
-term_in	4	equ	local	5
-asciiCode	8	equ	local	6
-isr_reset	0	isr	local	7
-isr_timer	5	isr	local	8
-isr_terminal	22	isr	local	9
-RelokacionaTabela
-ivt	0	R_X86_64noninst_16	3	0
-ivt	4	R_X86_64noninst_16	3	0
-ivt	6	R_X86_64noninst_16	3	0
-isr	3	R_X86_64_16	1	0
-isr	41	R_X86_64_PC16	2	-2
-isr	53	R_X86_64_16	2	0
-Kodovi
-equ
-FF00FF020054
-ivt
-00000000050016000000000000000000
-isr
-50F9000000B06012A009000054B00904FF00A0064220B06012B06112A00904FF02B00904FF00A007050000A0190000017001B009040000A01642A0064220
+Tabela sekcija
+ivt               0                 16                
+isr               1                 62                
+
+Tabela simbola
+ivt            0              ivt            local          0              
+myStart        -1             UND            global         1              
+myCounter      -1             UND            global         2              
+isr            0              isr            local          3              
+term_out       65280          APS            local          4              
+term_in        65282          APS            local          5              
+asciiCode      84             APS            local          6              
+isr_reset      0              isr            local          7              
+isr_timer      5              isr            local          8              
+isr_terminal   22             isr            local          9              
+
+Tabela relokacionih zapisa
+ivt            0              R_X86_64noninst_16       isr            0              
+ivt            4              R_X86_64noninst_16       isr            0              
+ivt            6              R_X86_64noninst_16       isr            0              
+isr            3              R_X86_64_16              myStart        0              
+isr            41             R_X86_64_PC16            myCounter      -2             
+isr            53             R_X86_64_16              myCounter      0              
+
+
+Sadrzaj sekcija
+ivt 00000000050016000000000000000000
+isr 50F9000000B06012A009000054B00904FF00A0064220B06012B06112A00904FF02B00904FF00A007050000A0190000017001B009040000A01642A0064220

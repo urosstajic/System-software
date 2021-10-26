@@ -1,16 +1,17 @@
-.extern b, dd
-.global ww
-.equ a, 8
-.equ ww, 0x10
-.section prva
-ldr r4, a
-andrea: ldr r4, %a
-str r5, dd
-str r5, %dd
-.word 1, ww, 020
-.section druga
-jmp *a
-str r5, $andrea
-jne %a
-.word andrea
+.extern uvezen
+.global labela1, nekob
+#kommmmmmm
+.section prvasekcija
+.word 6, nekob, 0x20
+.section drugasekcija
+nekoa: 
+add r2, r3
+str r1, %nekob #komentar
+pop r1
+labela1: 
+push r4
+nekob: 
+ldr r2, 0x11
+ldr r5, %labela1
+jmp *uvezen
 .end

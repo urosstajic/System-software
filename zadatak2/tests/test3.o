@@ -1,0 +1,18 @@
+Tabela sekcija
+drugasekcija      0                 35                
+
+Tabela simbola
+a              -1             UND            global         0              
+drugasekcija   0              drugasekcija   local          1              
+nesto          12             drugasekcija   local          2              
+labeladva      20             drugasekcija   local          3              
+
+Tabela relokacionih zapisa
+drugasekcija   0              R_X86_64noninst_16       drugasekcija   0              
+drugasekcija   18             R_X86_64_16              a              0             
+drugasekcija   23             R_X86_64_PC16            a              -2             
+drugasekcija   28             R_X86_64_16              drugasekcija   0              
+
+
+Sadrzaj sekcija
+drugasekcija 0C0000000000000000000000B06112A059000000A01705000050F900000C50F9000010

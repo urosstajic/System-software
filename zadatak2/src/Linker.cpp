@@ -1,1418 +1,1603 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include "Linker.h"
-#include <iterator>
+#include "Lista.h"
 #include <sstream>
+#include <iostream>
+#include "PocetnaAdresaSekcija.h"
+#include "Main.h"
+#include <stdio.h>
 
-//835 linija linkable
-//for (iter = kodovi.begin(); iter != kodovi.end(); ++iter) 
+using namespace std;
 
+TabelaSekcija Linker::tab_sekcija;
+TabelaSimbola Linker::tab_simbola;
+list<Lista> Linker::po_redu_sekcije;
+TabelaRelokacionihZapisa Linker::rel_zapisi;
+ListaSadrzajaSekcije Linker::sadrzaji_sek;
+int Linker::brojac_tren_fajl = 1;
+TabelaSekcija Linker::pomocna_tabela_sekcija;
+int Linker::drugi_brojac_tren_fajla = 1;
+list<int> Linker::koliko_rel_zapisa_ima_u_jednom_fajlu;
+ListaSadrzajaSekcije Linker::po_redu_sadrzaji;
 
+//g++ -o prog Main.cpp Asembler.cpp Linker.cpp Simb.cpp Sekcija.cpp PocetnaAdresaSekcija.cpp ListaSadrzajaSekcije.cpp Lista.cpp RelokacioniZapis.cpp TabelaSimbola.cpp TabelaSekcija.cpp SadrzajSekcije.cpp TabelaRelokacionihZapisa.cpp
 
-bool Linker::postojiKodSekcije(string ime)
-{
-	list <KodSekcije> ::iterator iter;
-	for (iter = kodovi.begin(); iter != kodovi.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getImeSek() == ime) {
-		     return true;
-		}
-	}
-	return false;
-}
-
-
-
-
-
-void Linker::setujKodSekcije(string ime, string kodic) {
-	list <KodSekcije> ::iterator iter;
-	for (iter = kodovi.begin(); iter != kodovi.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getImeSek() == ime) {
-			 (*iter).kod=kodic;
-			 return;
-		}
-	}
-}
-
-
-
-string Linker::dohvKodKodaSekcije(string ime) {
-	list <KodSekcije> ::iterator iter;
-	for (iter = kodovi.begin(); iter != kodovi.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getImeSek() == ime) {
-			return (*iter).kod;
-		}
-	}
-	
-}
-
-KodSekcije& Linker::dohvKodSekcije(string ime)
-{
-	list <KodSekcije> ::iterator iter;
-	for (iter = kodovi.begin(); iter != kodovi.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getImeSek()== ime) {
-			return (*iter);
-		}
-	}
-	KodSekcije* k=new KodSekcije(ime,-4);
-	return *k;
-}
-
-int Linker::postojiOffsetSek(string ime)
-{
-	list <OffsetSekcije> ::iterator iter;
-	for (iter = offsetisek.begin(); iter != offsetisek.end(); ++iter) { //bilo je ++iter
-		if ((*iter).ime == ime) {
-			return (*iter).offset;
-		}
-	}
-	return 0;
-}
-
-int Linker::postojiOffsetSekIII(string ime, int iii)
-{
-	list <OffsetSekcije> ::iterator iter;
-	for (iter = offsetisek.begin(); iter != offsetisek.end(); ++iter) { //bilo je ++iter
-		if ((*iter).ime == ime && (*iter).itielemnt==iii) {
-			return (*iter).offset;
-		}
-	}
-	return 0;
-}
-
-
-
-int Linker::postojiOffsetSekZASVE(string ime)
-{
-	list <OffsetSekcije> ::iterator iter;
-	for (iter = offsetisekZASVE.begin(); iter != offsetisekZASVE.end(); ++iter) { //bilo je ++iter
-		if ((*iter).ime == ime) {
-			return (*iter).offset;
-		}
-	}
-	return 0;
-}
-
-int Linker::postojiKaoStari(int stari)
-{
-	list <StariRB> ::iterator iter;
-	for (iter = stariredbrojevi.begin(); iter != stariredbrojevi.end(); ++iter) { //bilo je ++iter
-		if ((*iter).stari == stari) {
-			return (*iter).novi;
-		}
-	}
-	return -5;
-}
-
-OffsetSekcije& Linker::dohvOffsetSek(string ime)
-{
-	list <OffsetSekcije> ::iterator iter;
-	for (iter = offsetisek.begin(); iter != offsetisek.end(); ++iter) { //bilo je ++iter
-		if ((*iter).ime == ime) {
-			return (*iter);
-		}
-	}
-}
-
-bool Linker::noviBrojDaLiJeLokalniIliEqu(int rbb)
-{
-	list <Simbol> ::iterator iter;
-	for (iter = tabelasimbola.tabela.begin(); iter != tabelasimbola.tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getSekcija() == "equ") {
-			return true;
-
-		}
-		if ((*iter).getRB()==rbb) {
-			return (*iter).getLocal();
-		}
-	}
-	
-}
-
-int Linker::noviOffsetIzTabeleSim(int rbb)
-{
-	list <Simbol> ::iterator iter;
-	for (iter = tabelasimbola.tabela.begin(); iter != tabelasimbola.tabela.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getRB() == rbb) {
-		///////////////vrati iz starih rednih brojeva za sek
-			int i = postojiOffsetSek((*iter).getLabela());
-			return i;
-		}
-	}
-	return 0;
-}
-
-void Linker::dodajuOffseteSek(OffsetSekcije sek)
-{
-	offsetisek.push_back(sek);
-}
-
-void Linker::dodajuStareRBbrojeve(StariRB r)
-{
-	stariredbrojevi.push_back(r);
-}
-
-
-
-void Linker::dodajuKodove(KodSekcije s)
-{
-	kodovi.push_back(s);
-}
-
-string Linker::dohvPocetnuAdresuZaKodSekcije(string ime) {
-	list <Sekcija> ::iterator iter1;
-
-	for (iter1 = hextabelasekcija.tabela.begin(); iter1 != hextabelasekcija.tabela.end(); ++iter1) {
-		if ((*iter1).ime == ime) {
-			return (*iter1).pocetnaAdresa;
-		}
-	}
-}
-
-void Linker::ispisiKodoveHEXPravilno(ofstream*  izlazni) {
-	
-	string adresa;
-	int pocetak=0,kraj=0;
-	
-	string ppp = "";
-	string pocetna="#";
-	string stringic;
-	list <KodSekcije> ::iterator iter;
-
-	for (iter = kodoviHEX.begin(); iter != kodoviHEX.end(); ++iter) { //bilo je ++iter
-		if ((*iter).getImeSek() == "equ") {
+void Linker::linker(ifstream& fajl) {
+	string red;
+	bool sekcija = false, simbol = false, relok=false, sadrzaj=false;
+	list<Sekcija> sekcije_ovog_elem_liste;
+	while (getline(fajl, red)) {
+		if (red == "") {
 			continue;
 		}
-
-		string adresa = dohvPocetnuAdresuZaKodSekcije((*iter).getImeSek());
-
-		if ((pocetna == "#") || (jednako(pocetna,adresa))) {
-			stringic += (*iter).kod;
-			char hex_stringg[20];
-			sprintf(hex_stringg, "%X", (*iter).kod.size() / 2);
-			string sizeofkod = hex_stringg;
-
-			string kk = saberi(adresa, sizeofkod);
-			if (pocetna == "#") ppp = adresa;
-			pocetna = kk;
+		else if (red == "Tabela sekcija") {
+			//cout << "Uslo ovde";
+			sekcija = true;
+			simbol = false;
+			relok = false;
+			sadrzaj = false;
+			continue;
+		}
+		else if (red == "Tabela simbola") {
+			//cout << "Udje u tab simb";
+			sekcija = false;
+			simbol = true;
+			relok = false;
+			sadrzaj = false;
+			continue;
+		}
+		else if (red == "Tabela relokacionih zapisa") {
+			relok = true;
+			sekcija = false;
+			simbol = false;
+			sadrzaj = false;
+			continue;
+		}
+		else if (red == "Sadrzaj sekcija") {
+			relok = false;
+			sekcija = false;
+			simbol = false;
+			sadrzaj = true;
+			continue;
+		}
+		if (sekcija == true) {
+			//cout << "I sad ovde";
+			/*istringstream pomoc(red);
+			string sekcija, rbr, vel;
+			pomoc >> sekcija;
+			pomoc >> rbr;
+			pomoc >> vel; 
+			int pom_br = 0;
+			if (!tab_sekcija.da_li_postoji_sekcija(sekcija)) {
+				if (tab_sekcija.duzina() != 0) {
+					pom_br = tab_sekcija.duzina() + 1;
+				}
+			}
+			else {
+				pom_br = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+			}
 			
+			sekcije_ovog_elem_liste.push_back(Sekcija(sekcija, pom_br, stoi(vel)));
+			if (!tab_sekcija.da_li_postoji_sekcija(sekcija)) {
+				int broj = 0;
+				if (tab_sekcija.duzina() != 0) {
+					int broj = tab_sekcija.duzina() + 1;
+				}
+				Sekcija s = Sekcija(sekcija, broj, stoi(vel));
+				tab_sekcija.dodajSekciju(s);
+			}
+			else {
+				tab_sekcija.nadjiSekciju(sekcija).postaviVelicinu(tab_sekcija.nadjiSekciju(sekcija).getVelicina() + stoi(vel));
+			}*/
+			//cout << sekcije_ovog_elem_liste.size();
+		}
+		else if (simbol == true) {
+			istringstream pomoc(red);
+			string naziv, ofset, sekcija, loc_glob, rbr;
+			pomoc >> naziv;
+			pomoc >> ofset;
+			pomoc >> sekcija;
+			pomoc >> loc_glob;
+			pomoc >> rbr;
+			int pom = stoi(ofset);
+
+			if (tab_simbola.da_li_postoji_simbol(naziv)) {
+				//ovo moram da proverim
+				Simb& tren_simb = tab_simbola.dohvatiSimbolZaMenjanje(naziv);
+				if (tren_simb.dohvatiLocGlob() == "global" && loc_glob == "global" && sekcija!="UND") {
+					cout << "Simbol je visestruko definisan "<<naziv;
+					exit(1);
+				}
+				int sek = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+				
+				if (sekcija != "UND") {
+					int poc_adr = nadjiPocetnuAdresu(sekcija);
+					Simb s = Simb(naziv, pom + poc_adr, sek, loc_glob, tab_simbola.dohvatiDuzinu());
+					s.postaviNazivSekcije(sekcija);
+					tab_simbola.dodajSimb(s);
+					//tab_simbola.dohvatiSimbolZaMenjanje(naziv).postaviNazivSekcije(sekcija);
+				}
+			}
+			else {
+				int sek = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+				
+				if (sekcija != "UND") {
+					int poc_adr = nadjiPocetnuAdresu(sekcija);	
+					Simb s = Simb(naziv, pom + poc_adr, sek, loc_glob, tab_simbola.dohvatiDuzinu());
+					s.postaviNazivSekcije(sekcija);
+					tab_simbola.dodajSimb(s);
+					//tab_simbola.dohvatiSimbolZaMenjanje(naziv).postaviNazivSekcije(sekcija);
+				}
+				
+			}
+		}
+		else if (relok == true) {
+			istringstream pomoc(red);
+			string sekcija, ofset, tip_relokacije, ime_simb, adend;
+			pomoc >> sekcija;//ovo da se ispravi da bude string u ispisu u fajlu
+			pomoc >> ofset;
+			pomoc >> tip_relokacije;
+			pomoc >> ime_simb;
+			pomoc >> adend;
+			int poc_adr = nadjiPocetnuAdresu(sekcija);
+			int sek = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+			//sta da radim sa rednim brojem
+			int rbr= tab_simbola.nadjiSimbPoImenuISekciji(ime_simb, sekcija).dohvatiRbr();
+			/*if (tab_simbola.nadjiSimbPoImenuISekciji(ime_simb, sekcija).getLabel() != "greska") {
+				rbr= tab_simbola.nadjiSimbPoImenuISekciji(ime_simb, sekcija).dohvatiRbr();
+			}*/
+			RelokacioniZapis r = RelokacioniZapis(sek, stoi(ofset) + poc_adr, tip_relokacije, rbr, stoi(adend));
+			r.postaviImeSekcije(sekcija);
+			r.postaviImeSimbola(ime_simb);
+			rel_zapisi.dodajRelokacioniZapis(r);
+			RelokacioniZapis rr = RelokacioniZapis(sek, stoi(ofset) + poc_adr, tip_relokacije, rbr, stoi(adend));
+			rr.postaviImeSekcije(sekcija);
+			rr.postaviImeSimbola(ime_simb);
+			pamcenje_rel_zapisa.push_back(rr);
+		}
+		else if (sadrzaj == true) {
+			istringstream pomoc(red);
+			string naziv, kod;
+			pomoc >> naziv;
+			pomoc >> kod;
+			if (sadrzaji_sek.da_li_postoji_sadrzajSekcije(naziv)) {
+				SadrzajSekcije& s = sadrzaji_sek.dohvatiSekciju(naziv);
+				s.dodajKod(kod);
+			}
+			else {
+				sadrzaji_sek.dodajSadrzajSekcije(SadrzajSekcije(naziv));
+				SadrzajSekcije& s = sadrzaji_sek.dohvatiSekciju(naziv);
+				s.dodajKod(kod);
+			}
+			//izmena koda
+
+		}
+	}
+	//ovde je formiran i kod za tu sekciju i ako uzmem nesto da menjam to ce biti unutar njega, ako dodje neki novi kod u istu sekciju to ce biti unutar tog novog dela da se menja pa mislim da mogu ovde da radim to menjanje
+	list<RelokacioniZapis>::iterator iterat;
+	cout << "Pamcenje rel zapisa "<<pamcenje_rel_zapisa.size() << endl;
+	
+	for (iterat = pamcenje_rel_zapisa.begin(); iterat != pamcenje_rel_zapisa.end(); ++iterat) {
+		string tip_rel = (*iterat).dohvatiTipRelokacije();
+		string ime_sek = (*iterat).dohvatiImeSekcije();
+		string ime_simb = (*iterat).dohvatiImeSimbola();
+		int sek = (*iterat).dohvatiSekciju();
+		int ofset = (*iterat).dohvatiOfset();
+		//int poc_adr = nadjiPocetnuAdresu(ime_sek);
+		int poc_adr = tab_sekcija.pocetnaAdresa(ime_sek);
+		int rbr_simb = (*iterat).dohvatiRbrSimbola();
+		//zbog ovog ovde mi baca exception
+		string kod=sadrzaji_sek.dohvatiKod(ime_sek, ofset-poc_adr);
+		int vidi = ofset - poc_adr;
+		//cout<<endl << "Ovo je vidi " + vidi << endl;
+		int bla;
+		if (tip_rel == "R_X86_64_PC16") {
+			char* c = const_cast<char*>(kod.c_str());
+			int vred_int = (int)strtol(c, nullptr, 16);
+			int o = tab_simbola.dohvatiSimbPoRbr(rbr_simb).dohvatiOfset();
+			int za_menajnje = o + vred_int-ofset;
+			string heksa = decToHexa(za_menajnje);
+			string krajnje = "";
+			if (heksa.length() < 4) {
+				int nes = 4 - heksa.length();
+				for (int i = 0; i < nes; i++) {
+					krajnje += "0";
+				}
+				krajnje += heksa;
+			}
+			else {
+				krajnje = heksa;
+			}
+			sadrzaji_sek.izmeniKod(ime_sek, ofset - poc_adr, krajnje);
+		}
+		else if (tip_rel == "R_X86_64_16") {
+			char* c = const_cast<char*>(kod.c_str());
+			int vred_int = (int)strtol(c, nullptr, 16);
+			int o = tab_simbola.dohvatiSimbPoRbr(rbr_simb).dohvatiOfset();
+			int za_menajnje = o + vred_int;
+			string heksa = decToHexa(za_menajnje);
+			string krajnje = "";
+			if (heksa.length() < 4) {
+				int nes = 4 - heksa.length();
+				for (int i = 0; i < nes; i++) {
+					krajnje += "0";
+				}
+				krajnje += heksa;
+			}
+			else {
+				krajnje = heksa;
+			}
+			sadrzaji_sek.izmeniKod(ime_sek, ofset - poc_adr, krajnje);
+		}
+		else if (tip_rel == "R_X86_64noninst_16") {
+			kod = kod.substr(2,4)+kod.substr(0, 2);
+			char* c = const_cast<char*>(kod.c_str());
+			int vred_int = (int)strtol(c, nullptr, 16);
+			int o = tab_simbola.dohvatiSimbPoRbr(rbr_simb).dohvatiOfset();
+			int za_menajnje = o + vred_int;
+			string heksa = decToHexa(za_menajnje);
+			string krajnje = "";
+			if (heksa.length() < 4) {
+				int nes = 4 - heksa.length();
+				for (int i = 0; i < nes; i++) {
+					krajnje += "0";
+				}
+				krajnje += heksa;
+			}
+			else {
+				krajnje = heksa;
+			}
+			krajnje = krajnje.substr(2, 4) + krajnje.substr(0, 2);
+			sadrzaji_sek.izmeniKod(ime_sek, ofset - poc_adr, krajnje);
+		}
+
+	}
+	pamcenje_rel_zapisa.clear();
+	
+	
+	
+	/*cout << tab_sekcija << endl;
+	cout << tab_simbola << endl;
+	cout << rel_zapisi << endl;
+	cout << sadrzaji_sek << endl;*/
+	brojac_tren_fajl++;
+}
+
+int Linker::nadjiPocetnuAdresu(string naziv) {
+	int vrati = tab_sekcija.dohvatiVelicinuCeleSekcije(naziv);
+	//int vrati = 0;
+	int lok_brojac = 1;
+	list<Lista>::iterator i;
+	for (i = this->po_redu_sekcije.begin(); i != po_redu_sekcije.end(); i++) {
+		if (lok_brojac == brojac_tren_fajl) {
+			return vrati;
 		}
 		else {
-			adresa = ppp;
-			char hex_stringg[20];
-			sprintf(hex_stringg, "%X", stringic.size() / 2);
-			string sizeofkod = hex_stringg;
-
-			string krajnja = saberi(adresa, sizeofkod);
-			int oduzmii = stoi(adresa, nullptr, 16);
-
-			while (uporediVece(krajnja, adresa)) {
-
-
-				pocetak = (stoi(adresa, nullptr, 16) - oduzmii) * 2;  //skini joj nule ili x
-
-				string s5; //adresa
-				char hex_string[20];
-				int pomocna = stoi(adresa, nullptr, 16);
-				int pomocnaa = pomocna;
-				if (pomocna % 8 != 0) {
-					sprintf(hex_string, "%X", (pomocna % 8));
-					string xxxx = hex_string;
-					adresa = oduzmi(adresa, xxxx);
-					pomocnaa = stoi(adresa, nullptr, 16);
-				}
-				sprintf(hex_string, "%X", pomocnaa); //convert number to hex
-				s5 = hex_string;
-				for (int i = s5.size(); i < 4; i++) {
-					s5 = "0" + s5;
-				}
-				adresa = s5;
-				kraj = pocetak + 16;
-				*izlazni << adresa << ": ";
-				int i;
-				if (pomocna % 8 != 0) {
-					for (int kk = 0; kk < pomocna % 8; kk++)
-						*izlazni << "00 ";
-					kraj = kraj - 2 * (pomocna % 8);
-				}
-				for (i = pocetak; i < kraj && i < stringic.size(); i = i + 2) {
-					*izlazni << stringic[i] << stringic[i + 1] << " ";
-				}
-
-				if (!(i < stringic.size())) {
-					for (; i < kraj; i = i + 2)
-						*izlazni << "00 ";
-				}
-
-				*izlazni << endl;
-
-				adresa = saberi(adresa, "8");
-
-			}
-
-			adresa = dohvPocetnuAdresuZaKodSekcije((*iter).getImeSek());
-			stringic = (*iter).kod;
-			sprintf(hex_stringg, "%X", (*iter).kod.size() / 2);
-			sizeofkod = hex_stringg;
-
-			string kk = saberi(adresa, sizeofkod);
-			ppp = adresa;
-			pocetna = kk;
-			
+			vrati += (*i).nadjiPocetnuAdresu(naziv);
+			lok_brojac++;
 		}
-
-		
 	}
-
-
-	adresa = ppp;
-
-	/////
-	char hex_stringg[20];
-	sprintf(hex_stringg, "%X", stringic.size() / 2);
-	string sizeofkod = hex_stringg;
-
-	string krajnja = saberi(adresa, sizeofkod);
-	int oduzmii = stoi(adresa, nullptr, 16);
-
-	while (uporediVece(krajnja, adresa)) {
-
-
-		pocetak = (stoi(adresa, nullptr, 16) - oduzmii) * 2;  //skini joj nule ili x
-
-		string s5; //adresa
-		char hex_string[20];
-		int pomocna = stoi(adresa, nullptr, 16);
-		int pomocnaa = pomocna;
-		if (pomocna % 8 != 0) {
-			sprintf(hex_string, "%X", (pomocna % 8));
-			string xxxx = hex_string;
-			adresa = oduzmi(adresa, xxxx);
-			pomocnaa = stoi(adresa, nullptr, 16);
-		}
-		sprintf(hex_string, "%X", pomocnaa); //convert number to hex
-		s5 = hex_string;
-		for (int i = s5.size(); i < 4; i++) {
-			s5 = "0" + s5;
-		}
-		adresa = s5;
-		kraj = pocetak + 16;
-		*izlazni << adresa << ": ";
-		int i;
-		if (pomocna % 8 != 0) {
-			for (int kk = 0; kk < pomocna % 8; kk++)
-				*izlazni << "00 ";
-			kraj = kraj - 2 * (pomocna % 8);
-		}
-		for (i = pocetak; i < kraj && i < stringic.size(); i = i + 2) {
-			*izlazni << stringic[i] << stringic[i + 1] << " ";
-		}
-
-		if (!(i < stringic.size())) {
-			for (; i < kraj; i = i + 2)
-				*izlazni << "00 ";
-		}
-
-		*izlazni << endl;
-
-		adresa = saberi(adresa, "8");
-	}
-	/////
-
+	return vrati;
 }
 
-void Linker::ispisiKodove()
-{
-	cout << "Kodovi" << endl;
-	list <KodSekcije> ::iterator iter;
-	for (iter = kodovi.begin(); iter != kodovi.end(); ++iter) { //bilo je ++iter
-		cout << (*iter) << endl;
+int Linker::nadjiPocetnuAdrZaHex(string naziv) {
+	int vrati = 0;
+	list<Lista>::iterator i;
+	int lok_brojac = 1;
+	for (i = this->po_redu_sekcije.begin(); i != po_redu_sekcije.end(); i++) {
+		if (lok_brojac == brojac_tren_fajl) {
+			vrati += (*i).nadjiAdrZaHex(naziv);
+		}
+		else {
+
+		}
 	}
+	return 0;
 }
-void Linker::ispisiKodoveHEX()
-{
-	list <KodSekcije> ::iterator iter;
-	for (iter = kodoviHEX.begin(); iter != kodoviHEX.end(); ++iter) { //bilo je ++iter
-		cout << (*iter) << endl;
+
+
+void Linker::napraviTabeluSekcija(ifstream& fajl) {
+	string red;
+	bool sekcija = false, simbol = false, relok = false, sadrzaj = false;
+	list<Sekcija> sekcije_ovog_elem_liste;
+	while (getline(fajl, red)) {
+		if (red == "") {
+			continue;
+		}
+		else if (red == "Tabela sekcija") {
+			//cout << "Uslo ovde";
+			sekcija = true;
+			simbol = false;
+			relok = false;
+			sadrzaj = false;
+			continue;
+		}
+		else if (red == "Tabela simbola") {
+			sekcija = false;
+		}
+
+		if (sekcija == true) {
+			//cout << "I sad ovde";
+			istringstream pomoc(red);
+			string sekcija, rbr, vel;
+			pomoc >> sekcija;
+			pomoc >> rbr;
+			pomoc >> vel;
+			int pom_br = 0;
+			if (!tab_sekcija.da_li_postoji_sekcija(sekcija)) {
+				if (tab_sekcija.duzina() != 0) {
+					pom_br = tab_sekcija.duzina() + 1;
+				}
+			}
+			else {
+				pom_br = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+			}
+
+			sekcije_ovog_elem_liste.push_back(Sekcija(sekcija, pom_br, stoi(vel)));
+			if (!tab_sekcija.da_li_postoji_sekcija(sekcija)) {
+				int broj = 0;
+				if (tab_sekcija.duzina() != 0) {
+					broj = tab_sekcija.duzina();
+				}
+				Sekcija s = Sekcija(sekcija, broj, stoi(vel));
+				tab_sekcija.dodajSekciju(s);
+			}
+			else {
+				int sek = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+				Sekcija& s = tab_sekcija.nadjiSekcijuZaPromenuVelicine(sek);
+				s.postaviVelicinu(s.getVelicina() + stoi(vel));
+				//tab_sekcija.nadjiSekciju(sekcija).postaviVelicinu(tab_sekcija.nadjiSekciju(sekcija).getVelicina() + stoi(vel));
+			}
+			//cout << sekcije_ovog_elem_liste.size();
+		}
 	}
-}
-void Linker::obradaPrvi(ifstream& ulaz)
-{
-	prvi = false;
-	string linija;
-	getline(ulaz, linija); //mozda ne mora while
-	
-			if (linija == "TabelaSekcija") {
-				tabelasek = true;
-				while (tabelasek == true && getline(ulaz, linija) ) {
-					istringstream ime(linija);
-					string deo;
-					
-					
-					while (ime >> deo  && tabelasek==true) {
-						if (deo == "TabelaSimbola") {
-							tabelasek = false;
-							tabelasimb = true;
-							break;
-						}
-						string  size, rb, poc, kraj;
-						ime >> size; ime >> rb; ime >> poc; ime >> kraj;
-						int i = stoi(rb);
-						Sekcija s(deo,size,i,poc,kraj);
-						tabelasekcija.dodajSekciju(s);
-					
-				    }
-
-			    }
-				//cout <<"TabelaSekcija" <<endl<<tabelasekcija;
-			
-
-			}
-		   
-			if (tabelasimb == true) { //tabelasimvbola
-
-				while ( tabelasimb == true && getline(ulaz, linija)) {
-					istringstream ime(linija);
-					string deo;
-
-
-					while (ime >> deo && tabelasimb == true) { //deo je labela
-						if (deo == "RelokacionaTabela") {
-							tabelasimb = false;
-							relokacioni = true;
-							break;
-						}
-						string  offset, sek, lokal, rb;
-						ime >> offset; ime >> sek; ime >> lokal; ime >> rb;
-						int i = stoi(offset);
-						bool l;
-						if (lokal == "local") l = true;
-						else l = false;
-						int rbb = stoi(rb);
-						Simbol s(deo, sek, i, l);
-						tabelasimbola.dodajSimbol(s);
-						globalnibrojaczasimbole++;
-
-					}
-
-				}
-				//cout <<"TabelaSimbola" <<endl<<tabelasimbola;
-			}
-			if (relokacioni == true) { //tabelasimbola
-
-				while (relokacioni == true && getline(ulaz, linija)) {
-					istringstream ime(linija);
-					string deo;
-
-
-					while (ime >> deo && relokacioni == true) { //deo je labela
-						if (deo == "Kodovi") {
-							kodovi1 = true;
-							relokacioni = false;
-							break;
-						}
-
-						string  offset, tip, rb, add;
-						ime >> offset;  ime >> tip; ime >> rb; ime >> add;
-						int i = stoi(offset);
-						int j = stoi(rb);
-						int k = stoi(add);
-						RelZapis r(deo, i, tip, j, k);
-						brojacRelZapisaIzPrethodne++;
-						relokacionatabela.dodajZapis(r);
-					}
-
-				}
-				//cout << relokacionatabela;
-			}
-	
-
-			if (kodovi1 == true) { //relokacioni zapisi
-
-				while (getline(ulaz, linija)) {
-					if (linija == "") { break; }
-					istringstream ime(linija);
-					string deo;
-
-
-					while (ime >> deo) { //deo je labela
-						string masinski;
-						getline(ulaz, masinski);
-						KodSekcije k(deo);
-						k.dodajuKod(masinski);
-						dodajuKodove(k);
-
-
-					}
-
-				}
-				kodovi1 = false;
-				//ispisiKodove();
-				
-			}
-			
-	   
+	po_redu_sekcije.push_back(sekcije_ovog_elem_liste);
 }
 
-void Linker::obradaNePrvi(ifstream& ulaz)
-{
-	/////////////////////////////////////////////////////////////
-	string linija;
-	getline(ulaz, linija); //mozda ne mora while
+void Linker::ispis(string ime) {
+	list<Simb>::iterator it;
+	for (it = lista_nerazresenih.begin(); it != lista_nerazresenih.end(); it++) {
+		if (tab_simbola.da_li_postoji_simbol((*it).getLabel())) {
+			continue;
+		}
+		else {
+			cout << "Nisu razreseni svi simboli";
+			exit(1);
+		}
+	}
+	ofstream fajl;
+	fajl.open(ime);
+	//fajl << tab_sekcija << endl;
+	//fajl << tab_simbola << endl;
+	//fajl << rel_zapisi << endl;
+	//fajl << po_redu_sadrzaji << endl;
+	//fajl << endl;
+	this->ispisiListuSadrzaja(po_redu_sadrzaji, fajl);
+	fajl.close();
+}
 
-	if (linija == "TabelaSekcija") {
-		tabelasek = true;
-		while (tabelasek == true && getline(ulaz, linija)) {
-			istringstream ime(linija);
-			string deo;
+void Linker::ispisZaLinkable(string ime_fajla) {
+	ofstream fajl;
+	fajl.open(ime_fajla);
+	fajl << tab_sekcija << endl;
+	fajl << tab_simbola << endl;
+	fajl << rel_zapisi << endl;
+	sadrzaji_sek.ispisiSveSadrzaje(fajl);
+	fajl.close();
+}
 
+void Linker::linkable(ifstream& fajl) {
+	string red;
+	bool sekcija = false, simbol = false, relok = false, sadrzaj = false;
+	list<Sekcija> sekcije_ovog_elem_liste;
+	while (getline(fajl, red)) {
+		if (red == "") {
+			continue;
+		}
+		else if (red == "Tabela sekcija") {
+			//cout << "Uslo ovde";
+			sekcija = true;
+			simbol = false;
+			relok = false;
+			sadrzaj = false;
+			continue;
+		}
+		else if (red == "Tabela simbola") {
+			//cout << "Udje u tab simb";
+			sekcija = false;
+			simbol = true;
+			relok = false;
+			sadrzaj = false;
+			continue;
+		}
+		else if (red == "Tabela relokacionih zapisa") {
+			relok = true;
+			sekcija = false;
+			simbol = false;
+			sadrzaj = false;
+			continue;
+		}
+		else if (red == "Sadrzaj sekcija") {
+			relok = false;
+			sekcija = false;
+			simbol = false;
+			sadrzaj = true;
+			continue;
+		}
+		if (sekcija == true) {
+			continue;
+		}
+		else if (simbol == true) {
+			istringstream pomoc(red);
+			string naziv, ofset, sekcija, loc_glob, rbr;
+			pomoc >> naziv;
+			pomoc >> ofset;
+			pomoc >> sekcija;
+			pomoc >> loc_glob;
+			pomoc >> rbr;
+			int pom = stoi(ofset);
 
-			while (ime >> deo && tabelasek == true) {
-				if (deo == "TabelaSimbola") {
-					tabelasek = false;
-					tabelasimb = true;
-					break;
+			if (tab_simbola.da_li_postoji_simbol(naziv)) {
+				if (tab_sekcija.da_li_postoji_sekcija(naziv)) {
+					continue;	
 				}
-				string  size, rb, poc, kraj;
-				ime >> size; ime >> rb; ime >> poc; ime >> kraj;
-				int i = stoi(rb); //redni broj iz tabele simbola
-				if (tabelasekcija.postojiSekcija(deo)) {
-					//nadovezi
-					Sekcija& istasek = tabelasekcija.dohvSek(deo);
-					int n = stoi(size, nullptr, 16);
-					int offi = stoi(istasek.size, nullptr, 16); //bice decimalno
-
-					OffsetSekcije o(deo, offi);
-
-					dodajuOffseteSek(o);
-					istasek.promeniVel(n); //za neki broj
-
+				else if (tab_simbola.dohvatiSimbol(naziv).dohvatiNazivSekcije() == "UND") {
+					int sek = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+					int poc_adr = this->nadjiPocetnuAdrZaLinkable(sekcija);
+					int poc_adr_sekc = tab_sekcija.pocetnaAdresa(sekcija);
+					Simb& s = tab_simbola.dohvatiSimbolZaMenjanje(naziv);
+					s.postaviNazivSekcije(sekcija);
+					s.postaviBrSekcija(sek);
+					s.postaviOfset(poc_adr+pom);
 				}
 				else {
-					Sekcija s(deo, size, i, poc, kraj);
-					tabelasekcija.dodajSekciju(s);
-				}
-			}
-
-		}
-	//	cout << "TabelaSekcija" << endl << tabelasekcija;
-
-
-	}
-
-	if (tabelasimb == true) { //tabelasimbola
-
-		while (tabelasimb == true && getline(ulaz, linija)) {
-			istringstream ime(linija);
-			string deo;
-
-
-			while (ime >> deo && tabelasimb == true) { //deo je labela
-				if (deo == "RelokacionaTabela") {
-					tabelasimb = false;
-					relokacioni = true;
-					break;
-				}
-
-				string  offset, sek, lokal, rb;
-				ime >> offset; ime >> sek; ime >> lokal; ime >> rb;
-				int i = stoi(offset);
-				bool l;
-				if (lokal == "local") l = true;
-				else l = false;
-				int rbb = stoi(rb);
-				int postoji = postojiOffsetSek(sek);
-				if (postoji != 0) {
-					i += postoji; //menjamo offset
-				}
-
-				if (tabelasimbola.proveriLabelu(deo)) { //postoji u tabeli simb
-					Simbol& postojiLabela = tabelasimbola.dohvSimbol(deo);
-
-					if (deo == sek) {
-						StariRB s(deo, postojiLabela.getRB(), rbb);
-						dodajuStareRBbrojeve(s);
-					}
-
-					else {
-
-						if (sek == "UND" && postojiLabela.getSekcija() != "UND" && postojiLabela.getLocal()) {
-							//	StariRB s(deo, postojiLabela.getRB(), rbb);
-							StariRB s(deo, tabelasimbola.dohvatiRBSekcije(postojiLabela.getSekcija()), rbb);
-							dodajuStareRBbrojeve(s);
-						}
-						else if (sek == "UND" && postojiLabela.getSekcija() != "UND" && l==false) {
-							StariRB s(deo, postojiLabela.getRB(), rbb);
-							dodajuStareRBbrojeve(s);
-						}
-						else if (sek == "UND" && postojiLabela.getSekcija() == "UND") {
-							//StariRB s(deo, postojiLabela.getRB(), rbb); //vrv ovako
-							StariRB s(deo, tabelasimbola.dohvatiRBSekcije(postojiLabela.getSekcija()), rbb);
-							dodajuStareRBbrojeve(s);
-						}
-						else if (sek != "UND" && postojiLabela.getSekcija() == "UND") {
-							postojiLabela.setSekcija(sek);
-							postojiLabela.setLocal(l);
-							postojiLabela.setOffset(i);
-							if (l) {
-								StariRB s(deo, tabelasimbola.dohvatiRBSekcije(postojiLabela.getSekcija()), rbb);
-								dodajuStareRBbrojeve(s);
-							}
-							else {
-									StariRB s(deo, postojiLabela.getRB(), rbb); //novi stari
-									dodajuStareRBbrojeve(s);
-							}
-							
-						}
-						else {
-							if (!tabelasekcija.postojiSekcija(deo)) {
-								cout << "Visestruka definicija simbola" + deo << endl;
-							}
-
-						}
-					}
-				}
-				else {
-					Simbol s(deo, sek, i, l);
-					tabelasimbola.dodajSimbol(s);
-					lokalnibrojaczasimbole++;
-					if (l) {
-						StariRB ss(deo, tabelasimbola.dohvatiRBSekcije(s.getSekcija()), rbb);
-						dodajuStareRBbrojeve(ss);
-					}
-					else {
-						StariRB ss(deo, s.getRB(), rbb);
-						dodajuStareRBbrojeve(ss);
-					}
-					//
-					
-				}
-
-			}
-		}
-	
-
-		//cout << "TabelaSimbola" << endl << tabelasimbola;
-	}
-
-	if (relokacioni == true) { //tabelasimvbola
-
-		while (relokacioni == true && getline(ulaz, linija)) {
-			istringstream ime(linija);
-			string deo;
-
-
-			while (ime >> deo && relokacioni == true) { //deo je labela
-				if (deo == "Kodovi") {
-					kodovi1 = true;
-					relokacioni = false;
-					break;
-				}
-
-				string  offset, tip, rb, add;
-				ime >> offset;  ime >> tip; ime >> rb; ime >> add;
-                int i = stoi(offset);
-				int j = stoi(rb);
-				int k = stoi(add);
-                RelZapis r(deo, i, tip, j, k);
-				int nn = postojiOffsetSek(deo);
-				if (nn!=0) {
-					int offi = r.getOffset() + nn;
-					r.setOffset(offi);
-				}
-				int novibr = postojiKaoStari(j);
-				if (novibr!=-5) {
-					r.setRB(novibr);
-				}
-				
-				
-				
-				relokacionatabela.dodajZapis(r);
-				
-			}
-
-		}
-		
-	}
-	if (kodovi1 == true) { //relokacioni zapisi
-
-		while (getline(ulaz, linija)) {
-			if (linija == "") { break; }
-			istringstream ime(linija);
-			string deo;
-
-
-			while (ime >> deo) { //deo je labela
-				string masinski;
-				getline(ulaz, masinski);
-				KodSekcije& k=dohvKodSekcije(deo);
-				
-				k.dodajuKod(masinski);
-				if (k.indikator == -4 ) {
-					k.indikator = 0;
-					kodovi.push_back(k);
-				}
-				int brojac = brojacRelZapisaIzPrethodne;
-				
-				list <RelZapis> ::iterator iter;
-				for (iter = relokacionatabela.tabela.begin(); iter != relokacionatabela.tabela.end(); ++iter) { //bilo je ++iter
-					
-					if (brojacRelZapisaIzPrethodne > 0 && prvifajllinkable==true) {
-						
-							//da li postoji stari
-							int rb = (*iter).getRB();
-							Simbol& simb = tabelasimbola.dohvSimbRBPo(rb);
-							if (simb.getLocal() == true && simb.getLabela() != simb.getSekcija()) {
-								int rbsek = tabelasimbola.dohvatiRBSekcije(simb.getSekcija());
-								(*iter).setRB(rbsek); //na rb sekcije
-								//////
-								int novioffset = tabelasimbola.dohvatiOffsetRB(rb); //sta treba upisati
-								//prepravi u kodu
-								string kodic = dohvKodKodaSekcije(simb.getSekcija());
-								int lok = (*iter).getOffset(); ////
-
-								string s5;
-								char hex_string[20];
-
-								sprintf(hex_string, "%X", novioffset); //convert number to hex
-								s5 = hex_string;
-								for (int i = s5.size(); i < 4; i++) {
-									s5 = "0" + s5;
-								}
-
-								if ((*iter).getTipRealokacije() == "R_X86_64noninst_16") {
-									kodic[lok * 2] = s5[2];
-									kodic[lok * 2 + 1] = s5[3];
-									kodic[lok * 2 + 2] = s5[0];
-									kodic[lok * 2 + 3] = s5[1];
-								}
-								else {
-									kodic[lok * 2] = s5[0];
-									kodic[lok * 2 + 1] = s5[1];
-									kodic[lok * 2 + 2] = s5[2];
-									kodic[lok * 2 + 3] = s5[3];
-								}
-								setujKodSekcije(simb.getSekcija(), kodic);
-								//////
-							}
-						
-						brojacRelZapisaIzPrethodne--;
+					if (sekcija == "UND") {
 						continue;
 					}
-					brojac++;
-					if ((*iter).getSekcija()==deo) {
-						if (noviBrojDaLiJeLokalniIliEqu((*iter).getRB()+globalnibrojaczasimbole)) {
-							int novioffset = noviOffsetIzTabeleSim((*iter).getRB()+ globalnibrojaczasimbole); //sta treba upisati
-							//prepravi u kodu
-							string kodic=dohvKodKodaSekcije(deo);
-							int lok = (*iter).getOffset(); ////
-							
-							string s8, s9;
-							if ((*iter).getTipRealokacije() == "R_X86_64noninst_16") {
-								s8 = kodic.substr(lok * 2, 2);
-								s9 = kodic.substr(lok * 2 + 2, 2);
-							}
-							else {
-								s9 = kodic.substr(lok * 2, 2);
-								s8 = kodic.substr(lok * 2 + 2, 2);
-							}
-
-							int dodaj = stoi(s9 + s8, nullptr, 16); //sta se vec tamo nalazi
-
-							string s5;
-							char hex_string[20];
-
-							sprintf(hex_string, "%X", novioffset+dodaj); //convert number to hex
-							s5 = hex_string;
-							for (int i = s5.size(); i < 4; i++) {
-								s5 = "0" + s5;
-							}
-							if ((*iter).getTipRealokacije() == "R_X86_64noninst_16") {
-								kodic[lok * 2] = s5[2];
-								kodic[lok * 2 + 1] = s5[3];
-								kodic[lok * 2 + 2] = s5[0];
-								kodic[lok * 2 + 3] = s5[1];
-							}
-							else {
-								if (s5.size() == 8) {
-									kodic[lok * 2] = s5[4];
-									kodic[lok * 2 + 1] = s5[5];
-									kodic[lok * 2 + 2] = s5[6];
-									kodic[lok * 2 + 3] = s5[7];
-								}
-								kodic[lok * 2] = s5[0];
-								kodic[lok * 2 + 1] = s5[1];
-								kodic[lok * 2 + 2] = s5[2];
-								kodic[lok * 2 + 3] = s5[3];
-							}
-							setujKodSekcije(deo, kodic);
-						}
-						else { //globalni je
-						///////
-							string kodic = dohvKodKodaSekcije(deo);
-							int lok = (*iter).getOffset(); ////
-							string s5 = "0000";
-							if ((*iter).getTipRealokacije() == "R_X86_64noninst_16") {
-								kodic[lok * 2] = s5[2];
-								kodic[lok * 2 + 1] = s5[3];
-								kodic[lok * 2 + 2] = s5[0];
-								kodic[lok * 2 + 3] = s5[1];
-							}
-							else {
-								kodic[lok * 2] = s5[0];
-								kodic[lok * 2 + 1] = s5[1];
-								kodic[lok * 2 + 2] = s5[2];
-								kodic[lok * 2 + 3] = s5[3];
-							}
-							setujKodSekcije(deo, kodic);
-							///////
-						}
+					else {
+						cout << "Simbol " << naziv << " je visestruko definisan.";
+						exit(1);
 					}
+					
 				}
-				brojacRelZapisaIzPrethodne = brojac;
-
-
-			}
-
-		}
-		kodovi1 = false;
-	//	cout << relokacionatabela;
-	//	ispisiKodove();
-		globalnibrojaczasimbole += lokalnibrojaczasimbole;
-		lokalnibrojaczasimbole = 0;
-
-	}
-	//////////////////////////////////////////////////////////
-	offsetisek.clear(); // da za novi fajl bude to na 0
-	stariredbrojevi.clear();
-	prvifajllinkable = false;
-}
-
-
-
-void Linker::obradaLinkable(ifstream& ulaz)
-{
-	if (prvi) { //samo sve dodaje
-		obradaPrvi(ulaz);
-	}
-	//sad citaj i vidi treba li da dodas
-	obradaNePrvi(ulaz);
-
-}
-
-
-
-void Linker::linkable(list<string> lista, string smesti)
-{
-	
-	list<string> ::iterator iter1;
-	
-	for (iter1 = lista.begin(); iter1 != lista.end(); ++iter1) {
-		ifstream  otvori;
-		otvori.open((*iter1));
-		
-		if (otvori.is_open() == false) {
-			cout << "Neuspesno otvoreni fajlovi";
-			exit(1);
-		}
-		obradaLinkable(otvori);
-		otvori.close();
-		
-	}
-
-	ofstream izlazni;
-	izlazni.open(smesti);
-	///pa ovde sve da ispisuje a ne tamo gde sada
-	if (izlazni.is_open() == false) {
-		cout << "Neuspesno otvoreni fajlovi";
-		exit(1);
-	}
-
-	izlazni<<"TabelaSekcija" <<endl<< tabelasekcija;
-	izlazni << "TabelaSimbola" << endl << tabelasimbola;
-	izlazni << relokacionatabela;
-	izlazni << "Kodovi" << endl;
-	list <KodSekcije> ::iterator iter;
-	for (iter = kodovi.begin(); iter != kodovi.end(); ++iter) { //bilo je ++iter
-		izlazni << (*iter) << endl;
-	}
-	izlazni.close();
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////HEX//////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////
-
-void Linker::preuredikodoveHEX()
-{
-	list <Sekcija> ::iterator iter;
-	for (iter = hextabelasekcija.tabela.begin(); iter != hextabelasekcija.tabela.end(); ++iter) { //bilo je ++iter
-		string ime = (*iter).ime;
-		list <KodSekcije> ::iterator iter1;
-		for (iter1 = kodovi.begin(); iter1 != kodovi.end(); ++iter1) {
-			if (ime == (*iter1).getImeSek()) {
-				kodoviHEX.push_back((*iter1));
-			}
-		}
-	}
-}
-
-bool Linker::uporediVece(string s1, string s2)
-{
-	int n = stoi(s1, nullptr, 16);
-	int n2 = stoi(s2, nullptr, 16);
-	return n > n2;
-}
-
-bool Linker::uporediVeceJednako(string s1, string s2)
-{
-	int n = stoi(s1, nullptr, 16);
-	int n2 = stoi(s2, nullptr, 16);
-	return n >= n2;
-}
-
-bool Linker::uporediManje(string s1, string s2)
-{
-	int n = stoi(s1, nullptr, 16);
-	int n2 = stoi(s2, nullptr, 16);
-	return n2 > n;
-}
-
-bool Linker::jednako(string s1, string s2) {
-	int n = stoi(s1, nullptr, 16);
-	int n2 = stoi(s2, nullptr, 16);
-	return n2 == n;
-}
-
-string Linker::oduzmi(string s1, string s2)
-{
-
-	int n = stoi(s1, nullptr, 16);
-	int n2 = stoi(s2, nullptr, 16);
-	n -= n2;
-	string s5;
-	char hex_string[20];
-
-	sprintf(hex_string, "%X", n); //convert number to hex
-	s5 = hex_string;
-
-
-	return s5;
-}
-
-string Linker::saberi(string s1, string s2)
-{
-	int n = stoi(s1, nullptr, 16);
-	int n2 = stoi(s2, nullptr, 16);
-	n += n2;
-	string s5;
-	char hex_string[20];
-
-	sprintf(hex_string, "%X", n); //convert number to hex
-	s5 = hex_string;
-	
-
-	return s5;
-	
-}
-
-
-
-string Linker::postojiUPlace(string ime)
-{
-	list <Place> ::iterator iter;
-	for (iter = place.begin(); iter != place.end(); ++iter) { //bilo je ++iter
-		if ((*iter).sekcija == ime) {
-
-			int n = stoi((*iter).pocetnaadresa, nullptr, 16);
-			
-			string s5;
-			char hex_string[20];
-
-			sprintf(hex_string, "%X", n); //convert number to hex
-			s5 = hex_string;
-
-
-			return s5;
-
-		}
-	}
-	return "-1";
-}
-
-
-
-void Linker::obradiHEX()
-{
- //prvo obradjujem sekcije
-	string linija;
-	for(int i = 0; i < ulaznifajlVelicina; i++) {
-		getline(ulaznifajlovi[i], linija); //ucitava tabelu sek
-		while (getline(ulaznifajlovi[i], linija)) {
-			if (linija == "TabelaSimbola") {
-				break;
-			}
-			istringstream ime(linija);
-			string deo;
-
-			while (ime >> deo) {
-				string trenutnasek = deo;
 				
-				OffsetSekcije os(deo,0,i); // za taj iti fajl za tu sek
-				offsetisek.push_back(os);
-				if (hextabelasekcija.postojiSekcija(deo)) {
-					break;
+			}
+			else {
+				if (tab_sekcija.da_li_postoji_sekcija(naziv)) {//znaci dodajem sekciju
+					int sek = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+					Simb s = Simb(naziv, 0, sek, "local", tab_simbola.dohvatiDuzinu());
+					s.postaviNazivSekcije(sekcija);
+					tab_simbola.dodajSimb(s);
 				}
-				string size;
-				ime >> size; //ucitana velicina u hex
-				string nebitno1, nebitno2, nebitno3;
-				ime >> nebitno1; ime >> nebitno2; ime >> nebitno3;
-				if (deo == "equ") { //equ ne treba da doda
+				else {
+					int sek = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+					int poc_adr = this->nadjiPocetnuAdrZaLinkable(sekcija);
+					int poc_adr_sekc = tab_sekcija.pocetnaAdresa(sekcija);
+					Simb s = Simb(naziv, pom + poc_adr, sek, loc_glob, tab_simbola.dohvatiDuzinu());
+					s.postaviNazivSekcije(sekcija);
+					tab_simbola.dodajSimb(s);
+				}
+				
+
+			}
+		}
+		else if (relok == true) {
+			istringstream pomoc(red);
+			string sekcija, ofset, tip_relokacije, ime_simb, adend;
+			pomoc >> sekcija;//ovo da se ispravi da bude string u ispisu u fajlu
+			pomoc >> ofset;
+			pomoc >> tip_relokacije;
+			pomoc >> ime_simb;
+			pomoc >> adend;
+			int poc_adr = this->nadjiPocetnuAdrZaLinkable(sekcija);
+			int sek = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+			//sta da radim sa rednim brojem
+			int rbr = tab_simbola.dohvatiSimbol(ime_simb).dohvatiRbr();
+			RelokacioniZapis r = RelokacioniZapis(sek, stoi(ofset) + poc_adr, tip_relokacije, rbr, stoi(adend));
+			r.postaviImeSekcije(sekcija);
+			r.postaviImeSimbola(ime_simb);
+			rel_zapisi.dodajRelokacioniZapis(r);
+		}
+		else if (sadrzaj == true) {
+			istringstream pomoc(red);
+			string naziv, kod;
+			pomoc >> naziv;
+			pomoc >> kod;
+			if (sadrzaji_sek.da_li_postoji_sadrzajSekcije(naziv)) {
+				SadrzajSekcije& s = sadrzaji_sek.dohvatiSekciju(naziv);
+				s.dodajKod(kod);
+			}
+			else {
+				sadrzaji_sek.dodajSadrzajSekcije(SadrzajSekcije(naziv));
+				SadrzajSekcije& s = sadrzaji_sek.dohvatiSekciju(naziv);
+				s.dodajKod(kod);
+			}
+
+		}
+	}
+	brojac_tren_fajl++;
+}
+
+void Linker::hex(ifstream& fajl) {
+	string red;
+	bool sekcija = false, simbol = false, relok = false, sadrzaj = false;
+	list<Sekcija> sekcije_ovog_elem_liste;
+	int koliko_rel_zapisa = 0;
+	while (getline(fajl, red)) {
+		if (red == "") {
+			continue;
+		}
+		else if (red == "Tabela sekcija") {
+			//cout << "Uslo ovde";
+			sekcija = true;
+			simbol = false;
+			relok = false;
+			sadrzaj = false;
+			continue;
+		}
+		else if (red == "Tabela simbola") {
+			//cout << "Udje u tab simb";
+			sekcija = false;
+			simbol = true;
+			relok = false;
+			sadrzaj = false;
+			continue;
+		}
+		else if (red == "Tabela relokacionih zapisa") {
+			relok = true;
+			sekcija = false;
+			simbol = false;
+			sadrzaj = false;
+			continue;
+		}
+		else if (red == "Sadrzaj sekcija") {
+			relok = false;
+			sekcija = false;
+			simbol = false;
+			sadrzaj = true;
+			continue;
+		}
+		if (sekcija == true) {
+			continue;
+		}
+		else if (simbol == true) {
+			istringstream pomoc(red);
+			string naziv, ofset, sekcija, loc_glob, rbr;
+			pomoc >> naziv;
+			pomoc >> ofset;
+			pomoc >> sekcija;
+			pomoc >> loc_glob;
+			pomoc >> rbr;
+			int pom = stoi(ofset);
+			if (sekcija == "UND" && loc_glob == "global") {
+				int poc_adr = nadjiPocetnuAdresu(sekcija);
+				Simb s = Simb(naziv, -1, -1, loc_glob, lista_nerazresenih.size());
+				s.postaviNazivSekcije("UND");
+				lista_nerazresenih.push_back(s);
+			}
+			if (naziv == sekcija) {//znaci dodaje se sekcija
+				if (pomocna_tabela_sekcija.da_li_postoji_sekcija(naziv)) {
+					int postavi = this->nadjiTrenVelicinu(naziv);
+					pomocna_tabela_sekcija.nadjiSekciju(naziv).postaviVelicinu(postavi);
+				}
+				else {
+					Sekcija s = Sekcija(sekcija);
+					s.postaviPocetnuAdresu(tab_sekcija.nadjiSekciju(sekcija).dohvatiPocetnuAdresu());
+					s.postaviVelicinu(0);
+					pomocna_tabela_sekcija.dodajSekciju(s);
+				}
+			}
+			if (tab_simbola.da_li_postoji_simbol(naziv)) {
+				if (tab_sekcija.da_li_postoji_sekcija(naziv)) {
 					continue;
 				}
-				Sekcija s(deo, size);
-				string linija1;
-				for (int j = i+1; j < ulaznifajlVelicina; j++) {
-					getline(ulaznifajlovi[j], linija1); //ucitava tabelu sek
-					while (getline(ulaznifajlovi[j], linija1)) {
-						if (linija1 == "TabelaSimbola") {
-							break;
-						}
-						istringstream ime(linija1);
-						string deo1;
+				else if (loc_glob == "local") {
+					continue;
+				}
+				else if (sekcija == "UND") {
+					continue;
+				}
+				else {
+					cout << "Simbol " << naziv << " je visestruko definisan.";
+					exit(1);
+				}
 
-						while (ime >> deo1) {
-							if (deo1 == trenutnasek) {
-								string broj;
-								ime >> broj;
-								string nebitno11, nebitno22, nebitno33;
-								ime >> nebitno11; ime >> nebitno22; ime >> nebitno33;
-								int iii = stoi(s.size, nullptr, 16);
-								OffsetSekcije os(deo1, iii, j);
-								offsetisek.push_back(os);
-								s.size = saberi(broj, s.size); //hex sabiranje vraca se string
-								//napravi offset za OffsetSek za i-ti fajl
-								break;
+			}
+			else {
+				if (tab_sekcija.da_li_postoji_sekcija(naziv)) {//znaci dodajem sekciju
+					int sek = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+					Simb s = Simb(naziv, tab_sekcija.nadjiSekciju(naziv).dohvatiPocetnuAdresu(), sek, "local", tab_simbola.dohvatiDuzinu());
+					s.postaviNazivSekcije(sekcija);
+					tab_simbola.dodajSimb(s);
+				}
+				else {
+					if (loc_glob == "global" && sekcija!="UND") {
+						int sek = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+						int poc_adr = pomocna_tabela_sekcija.nadjiSekciju(sekcija).getVelicina();
+						int poc_adr_sekc = tab_sekcija.nadjiSekciju(sekcija).dohvatiPocetnuAdresu();
+						Simb s = Simb(naziv, pom + poc_adr_sekc + poc_adr, sek, loc_glob, tab_simbola.dohvatiDuzinu());
+						s.postaviNazivSekcije(sekcija);
+						tab_simbola.dodajSimb(s);
+					}
+				}
+			}
+		}
+		else if (relok == true) {
+			istringstream pomoc(red);
+			string sekcija, ofset, tip_relokacije, ime_simb, adend;
+			pomoc >> sekcija;//ovo da se ispravi da bude string u ispisu u fajlu
+			pomoc >> ofset;
+			pomoc >> tip_relokacije;
+			pomoc >> ime_simb;
+			pomoc >> adend;
+			int poc_adr = this->nadjiTrenVelicinu(sekcija);
+
+			int sek = tab_sekcija.nadjiSekciju(sekcija).getRbr();
+			int rbr = tab_simbola.nadjiSimbPoImenuISekciji(ime_simb, sekcija).dohvatiRbr();
+			RelokacioniZapis r = RelokacioniZapis(sek, stoi(ofset) + poc_adr, tip_relokacije, rbr, stoi(adend));
+			r.postaviImeSekcije(sekcija);
+			r.postaviImeSimbola(ime_simb);
+			rel_zapisi.dodajRelokacioniZapis(r);
+			RelokacioniZapis rr = RelokacioniZapis(sek, stoi(ofset) + poc_adr, tip_relokacije, rbr, stoi(adend));
+			rr.postaviImeSekcije(sekcija);
+			rr.postaviImeSimbola(ime_simb);
+			pamcenje_rel_zapisa.push_back(rr);
+			koliko_rel_zapisa++;
+		}
+		else if (sadrzaj == true) {
+			istringstream pomoc(red);
+			string naziv, kod;
+			pomoc >> naziv;
+			pomoc >> kod;
+			if (sadrzaji_sek.da_li_postoji_sadrzajSekcije(naziv)) {
+				SadrzajSekcije& s = sadrzaji_sek.dohvatiSekciju(naziv);
+				s.dodajKod(kod);
+			}
+			else {
+				sadrzaji_sek.dodajSadrzajSekcije(SadrzajSekcije(naziv));
+				SadrzajSekcije& s = sadrzaji_sek.dohvatiSekciju(naziv);
+				s.dodajKod(kod);
+			}
+		}
+	}
+	
+	//pamcenje_rel_zapisa.clear();
+	brojac_tren_fajl++;
+	koliko_rel_zapisa_ima_u_jednom_fajlu.push_back(koliko_rel_zapisa);
+}
+
+void Linker::srediSadrzaj() {
+	//ovde je formiran i kod za tu sekciju i ako uzmem nesto da menjam to ce biti unutar njega, ako dodje neki novi kod u istu sekciju to ce biti unutar tog novog dela da se menja pa mislim da mogu ovde da radim to menjanje
+	list<int>::iterator hehe;
+	int koliko_obradjeno=0;
+	hehe = koliko_rel_zapisa_ima_u_jednom_fajlu.begin();
+	list<RelokacioniZapis>::iterator iterat;
+	for (iterat = pamcenje_rel_zapisa.begin(); iterat != pamcenje_rel_zapisa.end(); iterat++) {
+		string tip_rel = (*iterat).dohvatiTipRelokacije();
+		string ime_sek = (*iterat).dohvatiImeSekcije();
+		string ime_simb = (*iterat).dohvatiImeSimbola();
+		int sek = (*iterat).dohvatiSekciju();
+		int ofset = (*iterat).dohvatiOfset();
+
+		int poc_adr = tab_sekcija.nadjiSekciju(ime_simb).dohvatiPocetnuAdresu();
+		int rbr_simb;
+		//zbog ovog ovde mi baca exception
+		string kod = sadrzaji_sek.dohvatiKod(ime_sek, ofset);
+		bool ima = tab_simbola.da_li_postoji_simbol(ime_simb);
+		if (tab_simbola.da_li_postoji_simbol(ime_simb) && !tab_sekcija.da_li_postoji_sekcija(ime_simb)) {
+			rbr_simb = tab_simbola.dohvatiSimbol(ime_simb).dohvatiRbr();
+			if (tip_rel == "R_X86_64_PC16") {
+				char* c = const_cast<char*>(kod.c_str());
+				int vred_int = (int)strtol(c, nullptr, 16);
+				int o = tab_simbola.dohvatiSimbPoRbr(rbr_simb).dohvatiOfset();
+				int poc_sekcije = tab_sekcija.nadjiSekciju(ime_sek).dohvatiPocetnuAdresu();
+				int za_menajnje = o + vred_int - ofset-poc_sekcije-2;
+				string heksa = decToHexaZaNegativne(za_menajnje);
+				string krajnje = "";
+				if (heksa.length() < 4) {
+					int nes = 4 - heksa.length();
+					for (int i = 0; i < nes; i++) {
+						krajnje += "0";
+					}
+					krajnje += heksa;
+				}
+				else {
+					krajnje = heksa;
+				}
+				sadrzaji_sek.izmeniKod(ime_sek, ofset, krajnje);
+			}
+			else if (tip_rel == "R_X86_64_16") {
+				char* c = const_cast<char*>(kod.c_str());
+				int vred_int = (int)strtol(c, nullptr, 16);
+				int o = tab_simbola.dohvatiSimbPoRbr(rbr_simb).dohvatiOfset();
+				int za_menajnje = o + vred_int;
+				string heksa = decToHexa(za_menajnje);
+				string krajnje = "";
+				if (heksa.length() < 4) {
+					int nes = 4 - heksa.length();
+					for (int i = 0; i < nes; i++) {
+						krajnje += "0";
+					}
+					krajnje += heksa;
+				}
+				else {
+					krajnje = heksa;
+				}
+				sadrzaji_sek.izmeniKod(ime_sek, ofset, krajnje);
+			}
+			else if (tip_rel == "R_X86_64noninst_16") {
+				kod = kod.substr(2, 4) + kod.substr(0, 2);
+				char* c = const_cast<char*>(kod.c_str());
+				int vred_int = (int)strtol(c, nullptr, 16);
+				int o = tab_simbola.dohvatiSimbPoRbr(rbr_simb).dohvatiOfset();
+				int za_menajnje = o + vred_int;
+				string heksa = decToHexa(za_menajnje);
+				string krajnje = "";
+				if (heksa.length() < 4) {
+					int nes = 4 - heksa.length();
+					for (int i = 0; i < nes; i++) {
+						krajnje += "0";
+					}
+					krajnje += heksa;
+				}
+				else {
+					krajnje = heksa;
+				}
+				krajnje = krajnje.substr(2, 4) + krajnje.substr(0, 2);
+				sadrzaji_sek.izmeniKod(ime_sek, ofset, krajnje);
+			}
+		}
+		else {//onda u odnosu na sekciju racunam za rel zapis
+			if (tip_rel == "R_X86_64_PC16") {
+				char* c = const_cast<char*>(kod.c_str());
+				int vred_int = (int)strtol(c, nullptr, 16);
+				int stv_poc_sekc = pokusaj(ime_simb);
+				int poc_sekcije = tab_sekcija.nadjiSekciju(ime_sek).dohvatiPocetnuAdresu();
+				int za_menjanje = vred_int + poc_adr - ofset-poc_sekcije-2;
+				string heksa = decToHexaZaNegativne(za_menjanje);
+				string krajnje = "";
+				if (heksa.length() < 4) {
+					int nes = 4 - heksa.length();
+					for (int i = 0; i < nes; i++) {
+						krajnje += "0";
+					}
+					krajnje += heksa;
+				}
+				else {
+					krajnje = heksa;
+				}
+				sadrzaji_sek.izmeniKod(ime_sek, ofset, krajnje);
+			}
+			else if (tip_rel == "R_X86_64_16") {
+				char* c = const_cast<char*>(kod.c_str());
+				int vred_int = (int)strtol(c, nullptr, 16);
+				int stv_poc_sekc = pokusaj(ime_simb);
+				int za_menjanje = vred_int + poc_adr;
+				string heksa = decToHexa(za_menjanje);
+				string krajnje = "";
+				if (heksa.length() < 4) {
+					int nes = 4 - heksa.length();
+					for (int i = 0; i < nes; i++) {
+						krajnje += "0";
+					}
+					krajnje += heksa;
+				}
+				else {
+					krajnje = heksa;
+				}
+				sadrzaji_sek.izmeniKod(ime_sek, ofset, krajnje);
+			}
+			else if (tip_rel == "R_X86_64noninst_16") {
+				kod = kod.substr(2, 4) + kod.substr(0, 2);
+				char* c = const_cast<char*>(kod.c_str());
+				int vred_int = (int)strtol(c, nullptr, 16);
+				//int o = tab_simbola.dohvatiSimbPoRbr(rbr_simb).dohvatiOfset();
+				int za_menajnje = poc_adr + vred_int;
+				string heksa = decToHexa(za_menajnje);
+				string krajnje = "";
+				if (heksa.length() < 4) {
+					int nes = 4 - heksa.length();
+					for (int i = 0; i < nes; i++) {
+						krajnje += "0";
+					}
+					krajnje += heksa;
+				}
+				else {
+					krajnje = heksa;
+				}
+				krajnje = krajnje.substr(2, 4) + krajnje.substr(0, 2);
+				sadrzaji_sek.izmeniKod(ime_sek, ofset, krajnje);
+			}
+		}
+		koliko_obradjeno++;
+		if (koliko_obradjeno == (*hehe)) {
+			drugi_brojac_tren_fajla++;
+			list<int>::iterator nadji_sl;
+			if (hehe == koliko_rel_zapisa_ima_u_jednom_fajlu.end()) {
+				break;
+			}
+			for (nadji_sl = koliko_rel_zapisa_ima_u_jednom_fajlu.begin(); nadji_sl != koliko_rel_zapisa_ima_u_jednom_fajlu.end(); nadji_sl++) {
+				if (nadji_sl == hehe) {
+					nadji_sl++; 
+					/*if (nadji_sl == koliko_rel_zapisa_ima_u_jednom_fajlu.end()) {
+						break;
+					}*/
+					list<int>::iterator novi=nadji_sl;
+					hehe =novi;
+					koliko_obradjeno = 0;
+					break;
+				
+				}
+			}
+		}
+	}
+
+	for (int s = 0; s < tab_sekcija.duzina(); s++) {
+		SadrzajSekcije m = sadrzaji_sek.dohvatiSadrzajPoNazivuSekcije(tab_sekcija.nadjiSekcijuPoRBr(s).getNaziv());
+		po_redu_sadrzaji.dodajSadrzajSekcije(m);
+	}
+	for (int m = 0; m < po_redu_sadrzaji.duzina(); m++) {
+		SadrzajSekcije s=po_redu_sadrzaji.dohvatiSadrzaj(m);
+		za_ispis_sadrzaj.dodajKod(s.dohvatiKod());
+	}
+	
+}
+
+string Linker::decToHexa(int n)
+{
+	if (n == 0) {
+		return "0";
+	}
+	char hexaDeciNum[100];
+	int i = 0;
+	while (n != 0) {
+		int temp = 0;
+		temp = n % 16;
+		if (temp < 10) {
+			hexaDeciNum[i] = temp + 48;
+			i++;
+		}
+		else {
+			hexaDeciNum[i] = temp + 55;
+			i++;
+		}
+		n = n / 16;
+	}
+	string pom = "";
+	for (int j = i - 1; j >= 0; j--) {
+		pom += hexaDeciNum[j];
+	}
+
+	return pom;
+}
+
+int Linker::nadjiPocetnuAdrZaLinkable(string naziv) {
+	list<Lista>::iterator i;
+	int lok_brojac = 1;
+	int vrati = 0;
+	for (i = po_redu_sekcije.begin(); i != po_redu_sekcije.end(); i++) {
+		if (lok_brojac == brojac_tren_fajl) {
+			return vrati;
+		}
+		else {
+			vrati += (*i).nadjiAdrZaLinkable(naziv);
+			lok_brojac++;
+		}
+	}
+	return vrati;
+}
+//ovo je odakle stv pocinje sekcija npr 2.0 i tako to
+int Linker::pokusaj(string naziv) {
+	int vrati = 0;
+	list<Lista>::iterator i;
+	vrati += tab_sekcija.nadjiSveVelPreMene(naziv);
+	int pomoc = 1;
+	for (i = po_redu_sekcije.begin(); i != po_redu_sekcije.end(); i++) {
+		if (!pomoc == drugi_brojac_tren_fajla) {
+			vrati += (*i).nadjiAdrZaHex(naziv);
+			pomoc++;
+		}
+		else {
+			return vrati;
+		}
+	}
+	return vrati;
+}
+
+void Linker::izbaciIzListe(string ime_simb) {
+	list<Simb>::iterator i;
+	for (i = lista_nerazresenih.begin(); i != lista_nerazresenih.end(); i++) {
+		if ((*i).getLabel() == ime_simb) {
+			lista_nerazresenih.erase(i);
+			break;
+		}
+	}
+}
+
+void Linker::napraviTabeluSekcijaZaHex(ifstream& fajl) {
+	string red;
+	bool sekcija = false, simbol = false, relok = false, sadrzaj = false;
+	list<Sekcija> sekcije_ovog_elem_liste;
+	while (getline(fajl, red)) {
+		if (red == "") {
+			continue;
+		}
+		else if (red == "Tabela sekcija") {
+			//cout << "Uslo ovde";
+			sekcija = true;
+			simbol = false;
+			relok = false;
+			sadrzaj = false;
+			continue;
+		}
+		else if (red == "Tabela simbola") {
+			sekcija = false;
+		}
+
+		if (sekcija == true) {
+			//cout << "I sad ovde";
+			istringstream pomoc(red);
+			string sekcija, rbr, vel;
+			pomoc >> sekcija;
+			pomoc >> rbr;
+			pomoc >> vel;
+			int pom_br = 0;
+			if (!pomocna_tabela_sekcija.da_li_postoji_sekcija(sekcija)) {
+				if (pomocna_tabela_sekcija.duzina() != 0) {
+					pom_br = pomocna_tabela_sekcija.duzina() + 1;
+				}
+			}
+			else {
+				pom_br = pomocna_tabela_sekcija.nadjiSekciju(sekcija).getRbr();
+			}
+
+			sekcije_ovog_elem_liste.push_back(Sekcija(sekcija, pom_br, stoi(vel)));
+			if (!pomocna_tabela_sekcija.da_li_postoji_sekcija(sekcija)) {
+				int broj = 0;
+				if (pomocna_tabela_sekcija.duzina() != 0) {
+					broj = pomocna_tabela_sekcija.duzina();
+				}
+				Sekcija s = Sekcija(sekcija, broj, stoi(vel));
+				pomocna_tabela_sekcija.dodajSekciju(s);
+			}
+			else {
+				int sek = pomocna_tabela_sekcija.nadjiSekciju(sekcija).getRbr();
+				Sekcija& s = pomocna_tabela_sekcija.nadjiSekcijuZaPromenuVelicine(sek);
+				s.postaviVelicinu(s.getVelicina() + stoi(vel));
+				//tab_sekcija.nadjiSekciju(sekcija).postaviVelicinu(tab_sekcija.nadjiSekciju(sekcija).getVelicina() + stoi(vel));
+			}
+			
+		}
+	}
+	po_redu_sekcije.push_back(sekcije_ovog_elem_liste);
+}
+
+
+void Linker::poredjajSekcije(list<PocetnaAdresaSekcija> l) {
+	list<PocetnaAdresaSekcija>::iterator iter;
+	for (iter = l.begin(); iter != l.end(); iter++) {
+		string p = (*iter).dohvatiPocAdr();
+		char* c = const_cast<char*>(p.c_str());
+		int vred_int = (int)strtol(c, nullptr, 16);
+		int ve = pomocna_tabela_sekcija.nadjiSekciju((*iter).dohvatiImeSekcije()).getVelicina();
+		if (tab_sekcija.duzina() == 0) {
+
+		}
+		else {
+			if (tab_sekcija.nadjiSekcijuPoRBr(tab_sekcija.duzina() - 1).dohvatiPocetnuAdresu() + tab_sekcija.nadjiSekcijuPoRBr(tab_sekcija.duzina() - 1).getVelicina() > vred_int) {
+				cout << "Sekcije se preklapaju";
+				exit(1);
+			}
+		}
+		Sekcija s = Sekcija((*iter).dohvatiImeSekcije(), tab_sekcija.duzina(), ve);
+		s.postaviPocetnuAdresu(vred_int);
+		//s.postaviVelicinu(pomocna_tabela_sekcija.nadjiSekciju((*iter).dohvatiImeSekcije()).getVelicina());
+		tab_sekcija.dodajSekciju(s);
+	}
+	int i = 0;
+	//cout << "ovo je pom" << pomocna_tabela_sekcija.duzina();
+	while (tab_sekcija.duzina() < pomocna_tabela_sekcija.duzina()) {
+		Sekcija pom=pomocna_tabela_sekcija.nadjiSekcijuPoRBr(i);
+		if (tab_sekcija.da_li_postoji_sekcija(pom.getNaziv())) {
+			i++;
+		}
+		else {
+			Sekcija nova = Sekcija(pom.getNaziv(), tab_sekcija.duzina(), pom.getVelicina());
+			//nova.postaviVelicinu(pom.getVelicina());
+			nova.postaviPocetnuAdresu(tab_sekcija.nadjiElemPreMene(pom.getNaziv()));
+			tab_sekcija.dodajSekciju(nova);
+			i = 0;
+		}
+	}
+	pomocna_tabela_sekcija.izbaciSve();
+}
+
+int Linker::nadjiTrenVelicinu(string naziv) {
+	list<Lista>::iterator it;
+	int pom_br = 1;
+	int vrati = 0;
+	for (it = this->po_redu_sekcije.begin(); it != po_redu_sekcije.end(); it++) {
+		if (pom_br == brojac_tren_fajl) {
+			return vrati;
+		}
+		else {
+			vrati += (*it).nadjiAdrZaHex(naziv);
+			pom_br++;
+		}
+	}
+	return vrati;
+}
+
+string Linker::decToHexaZaNegativne(int br) {
+	char hex_string[20];
+	sprintf(hex_string, "%X", br);
+	string nest = hex_string;
+	string novi = "";
+	if (nest.length() > 4) {
+		novi += nest[nest.length() - 4];
+		novi += nest[nest.length() - 3];
+		novi += nest[nest.length() - 2];
+		novi += nest[nest.length() - 1];
+	}
+	else {
+		novi = nest;
+	}
+	return novi;
+}
+
+void Linker::ispisiListuSadrzaja(ListaSadrzajaSekcije li, ofstream& fajl) {
+	int koliko_popunjeno = 0;
+	int adresa;
+	for (int i = 0; i < li.duzina(); i++) {
+		if (i == 0) {
+			int poc_sekcije = tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(i).dohvatiNaziv()).dohvatiPocetnuAdresu();
+			int velicina = tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(i).dohvatiNaziv()).getVelicina();
+			int j = i + 1;
+			int koliko_nula = 0;
+			int pravi_pocetak = poc_sekcije;
+			while (poc_sekcije % 8 != 0) {
+				poc_sekcije--;
+				koliko_nula++;
+			}
+			
+			string poc_adr_heksa = decToHexa(poc_sekcije);
+			string kod = li.dohvatiSadrzaj(i).dohvatiKod();
+			adresa = poc_sekcije + 8;
+			string krajnje = "";
+			if (poc_adr_heksa.length() < 4) {
+				int nes = 4 - poc_adr_heksa.length();
+				for (int k = 0; k < nes; k++) {
+					krajnje += "0";
+				}
+				krajnje += poc_adr_heksa;
+			}
+			else {
+				krajnje = poc_adr_heksa;
+			}
+			int brojac = 0;
+			fajl << krajnje << " ";
+			for (int b = 0; b < koliko_nula; b++) {
+				fajl << "00 ";
+				brojac+=2;
+				koliko_popunjeno++;
+			}
+			//int brojac = 0;
+			for (int m = 0; m < kod.length(); m++) {
+				fajl << kod[m];
+				
+				if ((brojac+1) % 2 == 0) {
+					fajl << " ";
+					koliko_popunjeno++;
+				}
+				if ((brojac+1) % 16 == 0) {
+					//brojac += 8;
+					koliko_popunjeno = 0;
+					//if (brojac != kod.length() - 1) {
+						if (m != kod.length() - 1) {
+							fajl << endl;
+
+							string is = decToHexa(adresa);
+							string krajnje = "";
+							if (is.length() < 4) {
+								int nes = 4 - is.length();
+								for (int i = 0; i < nes; i++) {
+									krajnje += "0";
+								}
+								krajnje += is;
 							}
 							else {
-								break;
+								krajnje = is;
 							}
-
-
+							fajl << krajnje << " ";
+							adresa += 8;
 						}
-					}
-					//seek
-					ulaznifajlovi[j].clear();
-					ulaznifajlovi[j].seekg(0);
+						
+						//poc_sekcije += 8;
+				//	}
+					
 				}
-				hextabelasekcija.dodajSekciju(s);
-
+				brojac++;
 			}
-
-
-
-
-
-		}//kraj while unutrasnjeg
-	}//kraj while spoljasnjeg
-
-
-	//postavljanje pocetnih adresa
-
-	//-3 vrednost koju cuvamo na nivou sekcije
-
-	string maxadresa = "-1";
-	list <Sekcija> ::iterator iter;
-	for (iter = hextabelasekcija.tabela.begin(); iter != hextabelasekcija.tabela.end(); ++iter) {
-		string adresa = postojiUPlace((*iter).ime);
-		if (adresa != "-1") {
-			(*iter).pocetnaAdresa = adresa;
-			(*iter).krajnjaAdresa = oduzmi(saberi(adresa, (*iter).size), "1");
-			int a = stoi(adresa, nullptr, 16);
-			OffsetSekcije os((*iter).ime, a);
-			offsetisekZASVE.push_back(os);
-			int offi = stoi(adresa, nullptr, 16);
-
-			Simbol s((*iter).ime, (*iter).ime, offi, true);
-			hextabelasimbola.dodajSimbol(s);
-			string uporedi = (*iter).krajnjaAdresa;
-			if (uporediVece(saberi(uporedi,"1"), maxadresa)) { //uporedi vece od max
-				maxadresa = saberi(uporedi, "1");
-			}
-		}
-	}
-	if (maxadresa == "-1")
-		maxadresa = "0";
-	for (iter = hextabelasekcija.tabela.begin(); iter != hextabelasekcija.tabela.end(); ++iter) {
-		if ((*iter).pocetnaAdresa == "#") {
-			(*iter).pocetnaAdresa = maxadresa;
-			(*iter).krajnjaAdresa = oduzmi(saberi(maxadresa, (*iter).size), "1");
-			int a = stoi(maxadresa, nullptr, 16);
-			OffsetSekcije os((*iter).ime, a);
-			offsetisekZASVE.push_back(os);
-			int offi = stoi(maxadresa, nullptr, 16);
-
-			Simbol s((*iter).ime, (*iter).ime, offi, true);
-			hextabelasimbola.dodajSimbol(s);
-			string uporedi = (*iter).krajnjaAdresa;
-			maxadresa = saberi(uporedi, "1");
-		}
-	}
-	
-
-	TabelaSekcija pomocnahextabela;
-	
-	for (int iii = 0; iii < hextabelasekcija.tabela.size(); iii++) {
-		Sekcija s("","");
-		s.pocetnaAdresa = "FFFF";
-		for (iter = hextabelasekcija.tabela.begin(); iter != hextabelasekcija.tabela.end(); ++iter) {
-			if (uporediManje((*iter).pocetnaAdresa, s.pocetnaAdresa))
-				s = (*iter);
-		}
-
-		pomocnahextabela.tabela.push_back(s);
-
-		for (iter = hextabelasekcija.tabela.begin(); iter != hextabelasekcija.tabela.end(); ++iter) {
-			if ((*iter).ime == s.ime) {
-				(*iter).pocetnaAdresa = "FFFF";
-			}
-		}
-	}
-
-	hextabelasekcija = pomocnahextabela;
-
-
-
-	
-	//tabela simbola obrada
-	for (int i = 0; i < ulaznifajlVelicina; i++) {
-		// za svih i fajlova radi isto
-		TabelaSimbola pomocna;
-		RelTabela pomocnarel;
-		list<StariRB> staritabelasimb;
-		
-		
-		while (getline(ulaznifajlovi[i], linija)) {
-			
-			if (linija == "RelokacionaTabela") {
+			int sledece = i + 1;
+			if (sledece == li.duzina()) {
+				if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+				if (koliko_popunjeno == 0)break;
+				for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+					fajl << "00 ";
+				}
+				koliko_popunjeno = 0;
 				break;
 			}
-		
-			istringstream ime(linija);
-			string deo;
+			if (pravi_pocetak + velicina == tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu()) {//nastavlja se pa nema 0
 
-			while (ime >> deo) {
-				string  offset, sek, lokal, rb;
-				ime >> offset; ime >> sek; ime >> lokal; ime >> rb;
-				int i = stoi(offset);
-				bool l;
-				if (lokal == "local") l = true;
-				else l = false;
-				int rbb = stoi(rb);
-				Simbol s(deo, sek, i, l,rbb);
-			
-				pomocna.dodajSimbol(s);
-				break;
 			}
+			else {
+				int poc_adr_sled = tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu();
+				int prava_adr_sled = poc_adr_sled;
+				while (poc_adr_sled % 8 != 0) {
+					poc_adr_sled--;
+				}
+				if (pravi_pocetak + velicina >= poc_adr_sled && pravi_pocetak + velicina <= prava_adr_sled) {
 
+				}
+				else {
+					if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+					if (koliko_popunjeno == 0)continue;
+					for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+						fajl << "00 ";
+					}
+					koliko_popunjeno = 0;
+				}
+			}
 		}
-		//rel zapisi dodavanje
-		while (getline(ulaznifajlovi[i], linija)) {
-
-			if (linija == "Kodovi") {
-				break;
-			}
-
-			istringstream ime(linija);
-			string deo;
-			
-			while (ime >> deo) {
-				string  offset, tip, rb, add;
-				ime >> offset;  ime >> tip; ime >> rb; ime >> add;
-				int iii = stoi(offset);
-				int j = stoi(rb);
-				int k = stoi(add);
-				RelZapis r(deo, iii, tip, j, k,i);
-				pomocnarel.dodajZapis(r);
-				break;
-			}
-
-		}
-	//	cout << pomocna<<endl;
-		//cout << pomocnarel<<endl;  
-
-		//iziteriraj kroz sve i promeni i dodaj u svi rel zapisi
-		list<Simbol> ::iterator iter2;
-		for (iter2 = pomocna.tabela.begin(); iter2 != pomocna.tabela.end(); ++iter2) {
-			if ((*iter2).getLabela() == (*iter2).getSekcija()) { //ne radi za equ && (*iter2).getLabela()!=equ
-				Simbol sim = hextabelasimbola.dohvSimbol((*iter2).getLabela());
-				StariRB ss((*iter2).getLabela(), sim.getRB(), (*iter2).getRB());
-				staritabelasimb.push_back(ss);
-			}
-			else if ((*iter2).getLocal() == false && (*iter2).getSekcija()!="UND") {// globalni dodaj u tabelu simb hex
-				int napravioffset = (*iter2).getOffset();
-				napravioffset += postojiOffsetSekIII((*iter2).getSekcija(),i);
-				napravioffset += postojiOffsetSekZASVE((*iter2).getSekcija());
-				Simbol sim((*iter2).getLabela(), (*iter2).getSekcija(), napravioffset, false);
-				hextabelasimbola.dodajSimbol(sim);
-				StariRB ss((*iter2).getLabela(), sim.getRB(), (*iter2).getRB());
-				staritabelasimb.push_back(ss);
-			}
-			else if((*iter2).getSekcija() == "UND"){
-			 //dodaj u listu nedefinisanih
-				StariRB ss((*iter2).getLabela(), -5, (*iter2).getRB());
-				staritabelasimb.push_back(ss);
-				undefinedlabel.push_back((*iter2).getLabela());
-			}
-
-		}
-
-		//prodji kroz rel zapise prepravi rb i offset i dodaj u svirelzapisi
-		list<RelZapis> ::iterator iter3;
-		for (iter3 = pomocnarel.tabela.begin(); iter3 != pomocnarel.tabela.end(); ++iter3) {
-			int stari = (*iter3).getRB();
-			int novi = -1;
-			
-			//promeni offset
-				int napravioffset = (*iter3).getOffset();
-				napravioffset += postojiOffsetSekIII((*iter3).getSekcija(), i); //a mi smo dodali samo pomeraj unutar sek
-				(*iter3).setOffset(napravioffset);
-
-				list<StariRB>::iterator itt;
-				for (itt = staritabelasimb.begin(); itt != staritabelasimb.end(); ++itt) {
-					if ((*itt).stari == stari) {
-						novi = (*itt).novi;
-						if (novi == -5) {
-							PrepravkaRelZapisa r((*iter3).getSekcija(),(*iter3).getOffset(), (*itt).labela);
-							prepravke.push_back(r);
+		else {
+			int preth = i - 1;
+			//int koliko_popunjeno = 0;
+			int poc_sekc_preth= tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(preth).dohvatiNaziv()).dohvatiPocetnuAdresu();
+			int vel_preth= tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(preth).dohvatiNaziv()).getVelicina();
+			int poc_sekcije = tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(i).dohvatiNaziv()).dohvatiPocetnuAdresu();
+			int pravi_pocetak = poc_sekcije;
+			int velicina = tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(i).dohvatiNaziv()).getVelicina();
+			string kod = li.dohvatiSadrzaj(i).dohvatiKod();
+			if (poc_sekc_preth + vel_preth == poc_sekcije) {//nastavlja se
+				int broj = 0;
+				int koliko_uzeto = 0;
+				int ispisano = 0;
+				if (koliko_popunjeno != 0) {
+					koliko_uzeto = 8 - koliko_popunjeno;
+					int pravo_koliko_popu = koliko_popunjeno;
+					for (int s = 0; s < 8 - pravo_koliko_popu; s++) {
+						int doo = ispisano + 2;
+						for (int m = ispisano; m < doo && m<kod.length(); m++) {
+							fajl << kod[m];
+							if ((m + 1) % 2 == 0) {
+								fajl << " ";
+								koliko_popunjeno++;
+								ispisano += 2;
+								broj++;
+								if (broj == s) {
+									//koliko_uzeto = m;
+									koliko_popunjeno = 0;
+									break;
+								}
+							}
 						}
+
+					}
+				}
+				if (koliko_uzeto * 2 >= kod.length()) {
+					int sledece = i + 1;
+					if (sledece == li.duzina()) {
+						if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+						if (koliko_popunjeno == 0)break;
+						for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+							fajl << "00 ";
+						}
+						koliko_popunjeno = 0;
 						break;
 					}
+					if (pravi_pocetak + velicina == tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu()) {//nastavlja se pa nema 0
+
+					}
+					else {
+						int poc_adr_sled = tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu();
+						int prava_adr_sled = poc_adr_sled;
+						while (poc_adr_sled % 8 != 0) {
+							poc_adr_sled--;
+						}
+						if (pravi_pocetak + velicina >= poc_adr_sled && pravi_pocetak + velicina <= prava_adr_sled) {
+
+						}
+						else {
+							if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+							if (koliko_popunjeno == 0)continue;
+							for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+								fajl << "00 ";
+							}
+							koliko_popunjeno = 0;
+						}
+					}
+					continue;
+				}
+				fajl << endl;
+				string is = decToHexa(adresa);
+				string krajnje = "";
+				if (is.length() < 4) {
+					int nes = 4 - is.length();
+					for (int i = 0; i < nes; i++) {
+						krajnje += "0";
+					}
+					krajnje += is;
+				}
+				else {
+					krajnje = is;
+				}
+				fajl << krajnje << " ";
+				adresa += 8;
+				int pompom = 0;
+				for (int n = koliko_uzeto*2; n < kod.length(); n++) {
+					fajl << kod[n];
+					if ((pompom + 1) % 2 == 0 ) {
+						fajl << " ";
+						koliko_popunjeno++;
+					}
+					if ((pompom + 1) % 16 == 0) {
+						//brojac += 8;
+						//koliko_popunjeno = 0;
+						if (pompom != kod.length() - 1) {
+							if (n != kod.length()-1) {
+								fajl << endl;
+								string is = decToHexa(adresa);
+								string krajnje = "";
+								if (is.length() < 4) {
+									int nes = 4 - is.length();
+									for (int i = 0; i < nes; i++) {
+										krajnje += "0";
+									}
+									krajnje += is;
+								}
+								else {
+									krajnje = is;
+								}
+								fajl << krajnje << " ";
+								adresa += 8;
+								koliko_popunjeno = 0;
+							}
+							
+							//poc_sekcije += 8;
+						}
+
+					}
+					pompom++;
+				}
+				int sledece = i + 1;
+				if (sledece >= li.duzina()) {
+					if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+					for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+						fajl << "00 ";
+					}
+					koliko_popunjeno = 0;
+					break;
+				}
+				if (pravi_pocetak + velicina == tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu()) {//nastavlja se pa nema 0
 
 				}
+				else {
+					int poc_adr_sled = tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu();
+					int prava_adr_sled = poc_adr_sled;
+					while (poc_adr_sled % 8 != 0) {
+						poc_adr_sled--;
+					}
+					if (pravi_pocetak + velicina >= poc_adr_sled && pravi_pocetak + velicina <= prava_adr_sled) {
 
-				(*iter3).setRB(novi);
-
-			svirelzapisi.dodajZapis((*iter3));
-		}
-
-		staritabelasimb.clear(); //svakako nestane pa se napravi nova
-	}
-	///prepravi red brojeve u rel zapisima
-	list<PrepravkaRelZapisa> ::iterator iter4;
-	for (iter4 = prepravke.begin(); iter4 != prepravke.end(); ++iter4) {
-		int rb = hextabelasimbola.dohvatiRB((*iter4).globalnalabela);
-		list<RelZapis> ::iterator iter3;
-		for (iter3 = svirelzapisi.tabela.begin(); iter3 != svirelzapisi.tabela.end(); ++iter3)
-		{
-			if ((*iter3).getSekcija() == (*iter4).sekcija && (*iter3).getOffset() == (*iter4).offset) {
-				(*iter3).setRB(rb);
-			}
-		}
-	}
-	
-	//prodji kroz undefinedlabel i ako je prazna ok je ako nije,  nije se sve razresilo
-
-	//OTKOMENTARISATI ZA PRAVI PRIMER
-	
-         list<string> ::iterator iter5;
-	   for (iter5 = undefinedlabel.begin(); iter5 != undefinedlabel.end(); ++iter5) {
-		   if (hextabelasimbola.postojiLabela((*iter5))==false) {
-			cout << "Postojanje nerazresenog simbola " << (*iter5); exit(1);
-		   }
-	   }
-	
-	//ucitaj sve kodove spoji 
-	for (int i = 0; i < ulaznifajlVelicina; i++) {
-		
-		while (getline(ulaznifajlovi[i], linija)) {
-            istringstream ime(linija);
-			string deo;
-			ime >> deo;
-			if (postojiKodSekcije(deo)==false) { //ako ne postoji napravi
-				KodSekcije k(deo);
-				string masinski;
-				getline(ulaznifajlovi[i], masinski);
-				k.dodajuKod(masinski);
-				kodovi.push_back(k);
+					}
+					else {
+						if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+						if (koliko_popunjeno == 0)continue;
+						for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+							fajl << "00 ";
+						}
+						koliko_popunjeno = 0;
+					}
+				}
 			}
 			else {
-				KodSekcije& k = dohvKodSekcije(deo);
-				string masinski;
-				getline(ulaznifajlovi[i], masinski);
-				k.dodajuKod(masinski);
-			}
-		}
-	}
 
-	//u tabeli simbola se vec nalaze vrednosti gde ih je linker smestio !!BITNO!!
-	//prepravi kodove na osnovu rel zapisa
-	list<RelZapis> ::iterator iter6;
-	for (iter6 = svirelzapisi.tabela.begin(); iter6 != svirelzapisi.tabela.end(); ++iter6)
-	{
-	int prepravkaKod = 0;
-		int rb = (*iter6).getRB();
-			Simbol& sim=hextabelasimbola.dohvSimbRBPo(rb);
-		if (sim.getLocal() == false) { //globalni
-			prepravkaKod = sim.getOffset(); //simbol iz tabele simbola
-			if ((*iter6).getAddend() == -2) {
-				prepravkaKod -= 2;
-				int trenutnaAdresa = 0;
-				trenutnaAdresa = (*iter6).getOffset();
-				trenutnaAdresa += postojiOffsetSekIII((*iter6).getSekcija(), (*iter6).i);
-				trenutnaAdresa += postojiOffsetSekZASVE((*iter6).getSekcija());
-				prepravkaKod  -= trenutnaAdresa;
+				int koliko_nula = 0;
+				while (poc_sekcije % 8 != 0) {
+					poc_sekcije--;
+					koliko_nula++;
+				}
+				if (poc_sekc_preth + vel_preth >= poc_sekcije) {
+					int pommmm = koliko_popunjeno;
+					for (int b = 0; b < koliko_nula-pommmm; b++) {
+						fajl << "00 ";
+						//brojac += 2;
+						koliko_popunjeno++;
+					}
+					int brojac = koliko_popunjeno * 2;
+					if (brojac >= kod.length()) {
+						int sledece = i + 1;
+						if (sledece == li.duzina()) {
+							if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+							if (koliko_popunjeno == 0)break;
+							for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+								fajl << "00 ";
+							}
+							koliko_popunjeno = 0;
+							break;
+						}
+						if (pravi_pocetak + velicina == tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu()) {//nastavlja se pa nema 0
+
+						}
+						else {
+							int poc_adr_sled = tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu();
+							int prava_adr_sled = poc_adr_sled;
+							while (poc_adr_sled % 8 != 0) {
+								poc_adr_sled--;
+							}
+							if (pravi_pocetak + velicina >= poc_adr_sled && pravi_pocetak + velicina <= prava_adr_sled) {
+
+							}
+							else {
+								if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+								if (koliko_popunjeno == 0)continue;
+								for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+									fajl << "00 ";
+								}
+								koliko_popunjeno = 0;
+							}
+						}
+						continue;
+					}
+
+					for (int m = 0; m < kod.length(); m++) {
+						fajl << kod[m];
+
+						if ((brojac + 1) % 2 == 0) {
+							fajl << " ";
+							koliko_popunjeno++;
+						}
+						if ((brojac + 1) % 16 == 0) {
+							//brojac += 8;
+							koliko_popunjeno = 0;
+							//if (brojac != kod.length() - 1) {
+							if (m != kod.length() - 1) {
+								fajl << endl;
+
+								string is = decToHexa(adresa);
+								string krajnje = "";
+								if (is.length() < 4) {
+									int nes = 4 - is.length();
+									for (int i = 0; i < nes; i++) {
+										krajnje += "0";
+									}
+									krajnje += is;
+								}
+								else {
+									krajnje = is;
+								}
+								fajl << krajnje << " ";
+								adresa += 8;
+							}
+
+							//poc_sekcije += 8;
+					//	}
+
+						}
+						brojac++;
+					}
+					int sledece = i + 1;
+					if (sledece == li.duzina()) {
+						if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+						if (koliko_popunjeno == 0) break;
+						for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+							fajl << "00 ";
+						}
+						koliko_popunjeno = 0;
+						break;
+					}
+					if (pravi_pocetak + velicina == tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu()) {//nastavlja se pa nema 0
+
+					}
+					else {
+						int poc_adr_sled = tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu();
+						int prava_adr_sled = poc_adr_sled;
+						while (poc_adr_sled % 8 != 0) {
+							poc_adr_sled--;
+						}
+						if (pravi_pocetak + velicina >= poc_adr_sled && pravi_pocetak + velicina <= prava_adr_sled) {
+
+						}
+						else {
+							if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+							if (koliko_popunjeno == 0)continue;
+							for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+								fajl << "00 ";
+							}
+							koliko_popunjeno = 0;
+						}
+					}
+				}
+				else {
+					string poc_adr_heksa = decToHexa(poc_sekcije);
+					string kod = li.dohvatiSadrzaj(i).dohvatiKod();
+					adresa = poc_sekcije;
+					string is = decToHexa(adresa);
+					string krajnje = "";
+					if (is.length() < 4) {
+						int nes = 4 - is.length();
+						for (int k = 0; k < nes; k++) {
+							krajnje += "0";
+						}
+						krajnje += is;
+					}
+					else {
+						krajnje = is;
+					}
+					fajl << endl << krajnje << " ";
+					int brojac = 0;
+					adresa += 8;
+
+					for (int b = 0; b < koliko_nula; b++) {
+						fajl << "00 ";
+						brojac += 2;
+						koliko_popunjeno++;
+					}
+					//int brojac = 0;
+					if (brojac >= kod.length()) {
+						int sledece = i + 1;
+						if (sledece == li.duzina()) {
+							if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+							if (koliko_popunjeno == 0)break;
+							for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+								fajl << "00 ";
+							}
+							koliko_popunjeno = 0;
+							break;
+						}
+						if (pravi_pocetak + velicina == tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu()) {//nastavlja se pa nema 0
+
+						}
+						else {
+							int poc_adr_sled = tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu();
+							int prava_adr_sled = poc_adr_sled;
+							while (poc_adr_sled % 8 != 0) {
+								poc_adr_sled--;
+							}
+							if (pravi_pocetak + velicina >= poc_adr_sled && pravi_pocetak + velicina <= prava_adr_sled) {
+
+							}
+							else {
+								if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+								if (koliko_popunjeno == 0)continue;
+								for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+									fajl << "00 ";
+								}
+								koliko_popunjeno = 0;
+							}
+						}
+						continue;
+					}
+					for (int m = 0; m < kod.length(); m++) {
+						fajl << kod[m];
+
+						if ((brojac + 1) % 2 == 0) {
+							fajl << " ";
+							koliko_popunjeno++;
+						}
+						if ((brojac + 1) % 16 == 0) {
+							//brojac += 8;
+							if (m != kod.length() - 1) {
+								fajl << endl;
+								koliko_popunjeno = 0;
+								string is = decToHexa(adresa);
+								string krajnje = "";
+								if (is.length() < 4) {
+									int nes = 4 - is.length();
+									for (int i = 0; i < nes; i++) {
+										krajnje += "0";
+									}
+									krajnje += is;
+								}
+								else {
+									krajnje = is;
+								}
+								fajl << krajnje << " ";
+								adresa += 8;
+								//poc_sekcije += 8;
+							}
+
+						}
+						brojac++;
+					}
+					int sledece = i + 1;
+					if (sledece == li.duzina()) {
+						if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+						if (koliko_popunjeno == 0)break;
+						for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+							fajl << "00 ";
+						}
+						koliko_popunjeno = 0;
+						break;
+					}
+					if (pravi_pocetak + velicina == tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu()) {//nastavlja se pa nema 0
+
+					}
+					else {
+						int poc_adr_sled = tab_sekcija.nadjiSekciju(li.dohvatiSadrzaj(sledece).dohvatiNaziv()).dohvatiPocetnuAdresu();
+						int prava_adr_sled = poc_adr_sled;
+						while (poc_adr_sled % 8 != 0) {
+							poc_adr_sled--;
+						}
+						if (pravi_pocetak + velicina >= poc_adr_sled && pravi_pocetak + velicina <= prava_adr_sled) {
+
+						}
+						else {
+							if (koliko_popunjeno > 8)koliko_popunjeno -= 8;
+							if (koliko_popunjeno == 0)continue;
+							for (int kk = 0; kk < 8 - koliko_popunjeno; kk++) {
+								fajl << "00 ";
+							}
+							koliko_popunjeno = 0;
+						}
+					}
+				}
+				
 			}
-			
 		}
-		else {
-			prepravkaKod =postojiOffsetSekZASVE(sim.getSekcija());
-			prepravkaKod += postojiOffsetSekIII(sim.getSekcija(), (*iter6).i);  ///dodatooooo  radi za neki primer
-			if ((*iter6).getAddend() == -2) {
-				prepravkaKod -= 2;
-				int trenutnaAdresa = 0;
-				trenutnaAdresa = (*iter6).getOffset();
-				//trenutnaAdresa += postojiOffsetSekIII((*iter6).getSekcija(), (*iter6).i); 
-				trenutnaAdresa += postojiOffsetSekZASVE((*iter6).getSekcija());
-				prepravkaKod -= trenutnaAdresa;
-			}
-		}
-		//prepravi- ali tako sto ces ono sto se tamo nalazi sabrati sa prepravkaKoda
-		int lok = (*iter6).getOffset();
-		string prepravisek = (*iter6).getSekcija();
-		//////prekopiraj iz linkable////////////////////////////////////////////////////////
-		string kodic = dohvKodKodaSekcije(prepravisek);
 		
-		string s8, s9;
-		if ((*iter6).getTipRealokacije() == "R_X86_64noninst_16") {
-			s8 = kodic.substr(lok * 2, 2);
-			s9 = kodic.substr(lok * 2 + 2, 2);
-		}
-		else {
-			s9 = kodic.substr(lok * 2, 2);
-			s8 = kodic.substr(lok * 2 + 2, 2);
-		}
-
-		
-
-		int dodaj = stoi(s9 + s8, nullptr, 16); //sta se vec tamo nalazi
-
-		string s5;
-		char hex_string[20];
-
-		sprintf(hex_string, "%X", prepravkaKod + dodaj); //convert number to hex
-		s5 = hex_string;
-		for (int i = s5.size(); i < 4; i++) {
-			s5 = "0" + s5;
-		}
-		if ((*iter6).getTipRealokacije() == "R_X86_64noninst_16")
-		{
-			kodic[lok * 2] = s5[2];
-			kodic[lok * 2 + 1] = s5[3];
-			kodic[lok * 2 + 2] = s5[0];
-			kodic[lok * 2 + 3] = s5[1];
-		}
-		else {
-			if (s5.size() == 8) {
-				kodic[lok * 2] = s5[4];
-				kodic[lok * 2 + 1] = s5[5];
-				kodic[lok * 2 + 2] = s5[6];
-				kodic[lok * 2 + 3] = s5[7];
-			}
-			else {
-				kodic[lok * 2] = s5[0];
-				kodic[lok * 2 + 1] = s5[1];
-				kodic[lok * 2 + 2] = s5[2];
-				kodic[lok * 2 + 3] = s5[3];
-			}
-		}
-		setujKodSekcije(prepravisek, kodic);
-		/////////////////////////////////////////////////////////////////////////////////////
 	}
-
-	//lepo ispisi sve
-	cout << hextabelasimbola<<endl;
-	cout << hextabelasekcija<<endl;
-	cout << svirelzapisi;
-	
-	preuredikodoveHEX();
-	ispisiKodoveHEX();
-	
-	//ispis kodova na formatiran nacin  ADRESA-SADRZAJ
-	// 0000: 00 01 02 03 ...07
-	//0008: 
 }
 
 
-
-//////////hex
-void Linker::hex(list<string> ofajlovi, list<string> place, string smesti)
-{
-	int i = ofajlovi.size();
-	ulaznifajlVelicina = i;
-	ulaznifajlovi = new ifstream[i];
-
-	list <string> ::iterator iter;
-	
-	int j = 0;
-	for ( iter = ofajlovi.begin(); j < i; j++, ++iter) {
-		ulaznifajlovi[j].open((*iter));
-		if (ulaznifajlovi[j].is_open() == false) {
-			
-			cout << "Neuspesno otvoreni fajlovi";
-			exit(1);
-		}
-
-	}
-
-	for (iter = place.begin(); iter != place.end(); ++iter) {
-		int index = -1, index1=-1; // za =, za @
-
-		string linija = (*iter);
-		for (int i = 0; i < linija.length(); i++)
-		{
-			if (linija.at(i) == '=') {
-				index = i;
-				break;
+void Linker::proveriDaLiTrebaDaSeBriseRelZapis() {
+	TabelaRelokacionihZapisa t;
+	for (int i = 0; i < rel_zapisi.duzina(); i++) {
+		RelokacioniZapis r = rel_zapisi.dohvatiRelZapis(i);
+		if (!tab_sekcija.da_li_postoji_sekcija(r.dohvatiImeSimbola()) && tab_simbola.dohvatiSimbol(r.dohvatiImeSimbola()).dohvatiLocGlob()=="global" && tab_simbola.dohvatiSimbol(r.dohvatiImeSimbola()).dohvatiNazivSekcije()!="UND") {
+			if (tab_simbola.dohvatiSimbol(r.dohvatiImeSimbola()).dohvatiNazivSekcije() == r.dohvatiImeSekcije() && r.dohvatiTipRelokacije() == "R_X86_64_PC16") {//ovde bi onda trebalo da se obrise
+				//ovde mislim da moram da izmenim sadrzaj sekcije
+				string kod_za_izmenu = sadrzaji_sek.dohvatiKod(r.dohvatiImeSekcije(), r.dohvatiOfset());
+				int zameni = tab_simbola.dohvatiSimbol(r.dohvatiImeSimbola()).dohvatiOfset() + r.dohvatiAdend() - r.dohvatiOfset();
+				string heksa = decToHexaZaNegativne(zameni);
+				string krajnje = "";
+				if (heksa.length() < 4) {
+					int nes = 4 - heksa.length();
+					for (int i = 0; i < nes; i++) {
+						krajnje += "0";
+					}
+					krajnje += heksa;
+				}
+				else {
+					krajnje = heksa;
+				}
+				sadrzaji_sek.izmeniKod(r.dohvatiImeSekcije(), r.dohvatiOfset(), krajnje);
+			}
+			else {
+				RelokacioniZapis he = RelokacioniZapis(r.dohvatiSekciju(), r.dohvatiOfset(), r.dohvatiTipRelokacije(), r.dohvatiRbrSimbola(), r.dohvatiAdend());
+				he.postaviImeSekcije(r.dohvatiImeSekcije());
+				he.postaviImeSimbola(r.dohvatiImeSimbola());
+				t.dodajRelokacioniZapis(he);
 			}
 		}
-		int vel1 = linija.size() - index;
-		string novalinija = linija.substr(index, vel1);
-		for (int i = 0; i < novalinija.length(); i++)
-		{
-			if (novalinija.at(i) == '@') {
-				index1 = i;
-				break;
-			}
+		else {
+			RelokacioniZapis he = RelokacioniZapis(r.dohvatiSekciju(), r.dohvatiOfset(), r.dohvatiTipRelokacije(), r.dohvatiRbrSimbola(), r.dohvatiAdend());
+			he.postaviImeSekcije(r.dohvatiImeSekcije());
+			he.postaviImeSimbola(r.dohvatiImeSimbola());
+			t.dodajRelokacioniZapis(he);
 		}
-
-		int vel2 = novalinija.size() - index1;
-		string ime = novalinija.substr(0+1,index1-1);
-		string adresa = novalinija.substr(index1+1,vel2-1);
-		Place p(ime, adresa);
-		this->place.push_back(p);
 		
 	}
-
-	  obradiHEX();
-
-
-
-
-
-
-	for (int j = 0; j < i; j++) {
-		ulaznifajlovi[j].close();
+	if (t.duzina() < rel_zapisi.duzina()) {//tad treba da izmenim tabelu rel zapisa
+		rel_zapisi.ocistiSve();
+		for (int j = 0; j < t.duzina(); j++) {
+			RelokacioniZapis r = t.dohvatiRelZapis(j);
+			RelokacioniZapis dodaj = RelokacioniZapis(r.dohvatiSekciju(), r.dohvatiOfset(), r.dohvatiTipRelokacije(), r.dohvatiRbrSimbola(), r.dohvatiAdend());
+			dodaj.postaviImeSekcije(r.dohvatiImeSekcije());
+			dodaj.postaviImeSimbola(r.dohvatiImeSimbola());
+			rel_zapisi.dodajRelokacioniZapis(dodaj);
+		}
 	}
-
-	ofstream izlazni;
-	izlazni.open(smesti);
-	if (izlazni.is_open() == false) {
-		cout << "Neuspesno otvoreni fajlovi";
-		exit(1);
-	}
-	ispisiKodoveHEXPravilno( &izlazni);
-
-
-	izlazni.close();
+	//nakon ovog bi trebalo da promene rel zapisi
 }
-
-

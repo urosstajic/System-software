@@ -1,45 +1,57 @@
 #include "Sekcija.h"
+#include <iostream>
+#include <iomanip>
 
-Sekcija::Sekcija(string i, string s)
-{
+using namespace std;
+int Sekcija::pom_rbr = 0;
 
-	ime = i;
-	size = s;
+Sekcija::Sekcija(string n) {
+	this->naziv = n;
+	//this->objasnjenje = o;
+	//this->offset = of;
+	//this->sadrzaj = s;
+	this->rbr = pom_rbr;
+	pom_rbr++;
 }
 
-Sekcija::Sekcija(string i, string s, int r,string p,string k)
-{
-	ime = i;
-	size = s;
-	rb = r;
-	pocetnaAdresa = p;
-	krajnjaAdresa = k;
+string Sekcija::getNaziv() {
+	return this->naziv;
 }
 
+int Sekcija::getRbr() {
+	return this->rbr;
+}
+
+void Sekcija::postaviVelicinu(int v) {
+	this->velicina = v;
+}
 
 ostream& operator<<(ostream& it, const Sekcija& s)
 {
-	return it << s.ime << "\t" << s.size << "\t" << s.rb << "\t" << s.pocetnaAdresa << "\t" << s.krajnjaAdresa;
+	const char separator = ' ';
+	const int nameWidth = 15;
+	const int numWidth = 18;
+	
+	it << left << setw(numWidth) << setfill(separator) << s.naziv;
+	it << left << setw(numWidth) << setfill(separator) << s.rbr;
+	it << left << setw(numWidth) << setfill(separator) << s.velicina;
+	return it;
 }
 
-void Sekcija::promeniVel(int n)
-{
-	int vel = stoi(this->size, nullptr, 16);
-	vel += n;
-	string s5;
-	char hex_string[20];
+Sekcija::Sekcija(string n, int r, int vel) {
+	naziv = n;
+	rbr = r;
+	velicina = vel;
+}
 
-	sprintf(hex_string, "%X", vel); //convert number to hex
-	s5 = hex_string;
-	
-	string s6;
-	char hex_stringg[20];
+int Sekcija::getVelicina() {
+	return this->velicina;
+}
 
-	sprintf(hex_stringg, "%X", vel-1); //convert number to hex
-	s6 = hex_stringg;
-	
+void Sekcija::postaviPocetnuAdresu(int p) {
+	pocetna_adresa = p;
+}
 
-	this->size = s5;
-	this->krajnjaAdresa = s6;
-
+int Sekcija::dohvatiPocetnuAdresu() {
+	return pocetna_adresa;
 }
