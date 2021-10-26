@@ -1,0 +1,21 @@
+TabelaSekcija
+myCode	1C	0	0	1B
+myData	2	4	0	1
+equ	4	-1	0	3
+TabelaSimbola
+myCode	0	myCode	local	0
+tim_cfg	0	equ	local	1
+myStart	0	myCode	global	2
+wait	10	myCode	local	3
+myData	0	myData	local	4
+myCounter	0	myData	global	5
+RelokacionaTabela
+myCode	13	R_X86_64_16	5	0
+myCode	25	R_X86_64_16	0	0
+Kodovi
+equ
+FF10
+myCode
+A009000001B00904FF10A009040000A019000005740152F900000A00
+myData
+0000

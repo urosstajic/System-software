@@ -1,0 +1,18 @@
+TabelaSekcija
+treca	E	0	0	D
+prva	5	5	0	4
+TabelaSimbola
+treca	0	treca	local	0
+aa	5	treca	global	1
+bb	5	treca	global	2
+cc	5	treca	global	3
+dd	7	treca	global	4
+prva	0	prva	local	5
+RelokacionaTabela
+treca	12	R_X86_64_PC16	1	-2
+prva	3	R_X86_64_PC16	4	-2
+Kodovi
+treca
+30F90000557012180052F7050000
+prva
+52F7050000

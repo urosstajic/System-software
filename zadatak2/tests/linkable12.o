@@ -1,0 +1,29 @@
+TabelaSekcija
+prva	6	1	0	5
+druga	26	2	0	25
+treca	C	2	0	B
+TabelaSimbola
+flamingo	0	treca	global	0
+prva	0	prva	local	1
+druga	0	druga	local	2
+a	0	druga	local	3
+simbolcic1	10	druga	global	4
+b	13	druga	global	5
+simbolcic2	-1	UND	global	6
+treca	0	treca	local	7
+RelokacionaTabela
+prva	0	R_X86_64noninst_16	5	0
+druga	5	R_X86_64_PC16	5	-2
+druga	21	R_X86_64_PC16	4	-2
+druga	26	R_X86_64_16	0	0
+treca	5	R_X86_64_16	6	0
+treca	10	R_X86_64_PC16	5	-2
+druga	31	R_X86_64_16	5	0
+druga	36	R_X86_64_16	0	0
+Kodovi
+prva
+000005001400
+druga
+7012A017050000B06612A05642A059040028B02705000050F904000052F904000052F3030000
+treca
+7014A04904000052F7050000

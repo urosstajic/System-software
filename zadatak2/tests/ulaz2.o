@@ -1,0 +1,31 @@
+TabelaSekcija
+prva	22	3	0	21
+cetvrta	5	7	0	4
+treca	5	8	0	4
+equ	4	-1	0	3
+TabelaSimbola
+simbolcic1	-1	UND	global	0
+flamingo	-1	UND	global	1
+simbolcic2	0	equ	global	2
+prva	0	prva	local	3
+bb	15	prva	local	4
+aa	17	prva	local	5
+simbolcic3	24	prva	global	6
+cetvrta	0	cetvrta	local	7
+treca	0	treca	local	8
+RelokacionaTabela
+prva	0	R_X86_64noninst_16	2	0
+prva	2	R_X86_64noninst_16	6	0
+prva	22	R_X86_64_16	3	0
+prva	27	R_X86_64_16	3	0
+prva	32	R_X86_64_PC16	1	-2
+cetvrta	3	R_X86_64_PC16	6	-2
+Kodovi
+equ
+0010
+prva
+000000003A000C00100000000000007013712352F900001150F900000F52F7050000
+cetvrta
+52F7050000
+treca
+52F7050010

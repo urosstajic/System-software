@@ -1,0 +1,22 @@
+TabelaSekcija
+druga	9	1	0	8
+prva	7	2	0	6
+treca	C	3	0	B
+TabelaSimbola
+ww	-1	UND	global	0
+druga	0	druga	local	1
+prva	0	prva	local	2
+treca	0	treca	local	3
+b	0	treca	global	4
+a	4	treca	local	5
+RelokacionaTabela
+druga	5	R_X86_64_16	0	0
+prva	5	R_X86_64_PC16	0	-2
+treca	10	R_X86_64noninst_16	3	0
+Kodovi
+druga
+705630F60300007242
+prva
+841252F7050000
+treca
+000000007312550020000400

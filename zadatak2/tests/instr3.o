@@ -1,0 +1,18 @@
+TabelaSekcija
+.text	25	0	0	24
+TabelaSimbola
+.text	0	.text	local	0
+andrea	-1	UND	global	1
+a	-1	UND	global	2
+mika	14	.text	local	3
+spoljasnji	14	.text	global	4
+vulence	22	.text	local	5
+RelokacionaTabela
+.text	0	R_X86_64noninst_16	0	0
+.text	2	R_X86_64noninst_16	4	0
+.text	20	R_X86_64_16	2	0
+.text	25	R_X86_64_PC16	0	-2
+.text	30	R_X86_64_16	1	0
+Kodovi
+.text
+0E00000000000000000000000000B06112A049000000A01705000E50F900000050F9000010
